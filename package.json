@@ -1,0 +1,20 @@
+{
+  "name": "notion-automation",
+  "version": "1.0.0",
+  "description": "Automação geral da minha página de organização acadêmica no Notion",
+  "homepage": "https://github.com/gabrielsnamaro/Personal_Academic_Notion_Automations#readme",
+  "bugs": {
+    "url": "https://github.com/gabrielsnamaro/Personal_Academic_Notion_Automations/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gabrielsnamaro/Personal_Academic_Notion_Automations.git"
+  },
+  "license": "ISC",
+  "author": "Gabriel Silva Neiva Amaro",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
