@@ -14,5 +14,7 @@ export class Configuration {
         return result;
     }
 
-    static readonly PAGE_ID = this.#getEnv('COLLEGE_TASK_PAGE_ID', true);
+    static readonly PAGE_ID = this.#getEnv('COLLEGE_TASKS_PAGE_ID', true);
+    static readonly NOTION_TOKEN = this.#getEnv('NOTION_CONNECTION_TOKEN', true);
+    static readonly BASE_URL = 'https://api.notion.com/v1';
 }

@@ -3,6 +3,11 @@ interface QueryParam {
     value: string;
 }
 
+interface Header {
+    name: string,
+    value: string
+}
+
 enum HttpMethod {
     GET = 'GET',
     POST = 'POST',
@@ -12,15 +17,23 @@ enum HttpMethod {
 }
 
 export class Http {
-    static readonly #request = async (method: HttpMethod, url: string, params: Array<QueryParam>, body?: object) => {
+    static readonly #request = async (method: HttpMethod, url: string, params: Array<QueryParam> = [], headersList: Array<Header> = [], body?: object) => {
         const urlWithParams = this.#includeParams(url, params);
+
+        let headers: HeadersInit = {};
+        headersList.forEach((header) => {
+            headers[header.name] = header.value
+        });
+
         const options = {
             method,
+            headers
         }
+
         try {
             const res: Response = await fetch(urlWithParams, options);
-
-            return res;
+            const data = await res.json();
+            return data;
         } catch(err) {
             console.error('Erro na requisição', err);
         }
@@ -40,7 +53,7 @@ export class Http {
         return result;
     }
 
-    static readonly get = async (url: string, params?: Array<QueryParam>) => {
-        return await this.#request(HttpMethod.GET, url, params || []);
+    static readonly get = async (url: string, headers?: Array<Header>, params?: Array<QueryParam>) => {
+        return await this.#request(HttpMethod.GET, url, params, headers);
     }
 }
