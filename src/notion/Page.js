@@ -1,6 +1,7 @@
 const { NOTION_CONNECTION_TOKEN } = require('../config');
 const { Http, Headers } = require('../util/http/Http');
 const Block = require('./Block');
+const ElementBuilder = require('./elements/ElementBuilder');
 const NotionController = require('./NotionController');
 
 const generalHeaders = new Headers('Authorization', `Bearer ${NOTION_CONNECTION_TOKEN}`);
@@ -10,10 +11,12 @@ class Page {
     #pagePayload;
     #id;
     #blocks;
+    #blockPointer;
 
     constructor(id, blocks, pagePayload) {
         this.#id = id;
         this.#blocks = blocks;
+        this.#blockPointer = 0;
         this.#pagePayload = pagePayload;
     }
 
@@ -25,14 +28,35 @@ class Page {
     }
 
     getBlocks = () => this.#blocks;
+
+    getNextBlock = () => {
+        if(this.#blockPointer >= this.#blocks.length)
+            throw new Error('Não há mais blocos para serem extraídos dessa página. ');
+
+        const actual = this.#blocks[this.#blockPointer];
+        this.#blockPointer++;
+
+        return actual;
+    }
+
+    getElementPointer = () => this.#blockPointer;
+
+    setElementPointer = (pointer) => this.#blockPointer = pointer;
+
+    resetBlockCursor = () => this.#blockPointer = 0; 
+
+    getNextElement = () => {
+        return ElementBuilder.fromPage(this)
+            .tryTask()
+            .build();
+    }
 }
 
 async function test() {
-    const page = await Page.build('16471fa4f246805bb5cce4d3e82b026d');
+    const page = await Page.build('31971fa4f24680d190c9dff3e913bd3e');
 
-    page.getBlocks().forEach((block) => {
-        console.log(block.toString() + '\n');
-    })
+    console.log(page.getNextElement().toString());
+    console.log(page.getNextElement().toString());
 }
 
 test();

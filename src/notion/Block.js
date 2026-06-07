@@ -31,6 +31,8 @@ class Block {
     toString = () => {
         return JSON.stringify(this.#payload, null, 2);
     }
+
+    getType = () => this.#payload.type;
 }
 
 module.exports = Block;

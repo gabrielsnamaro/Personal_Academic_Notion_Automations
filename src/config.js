@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 
 function getEnv(name, fallback, required = true) {
     let variable = process.env[name];
