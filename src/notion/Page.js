@@ -1,33 +1,38 @@
 const { NOTION_CONNECTION_TOKEN } = require('../config');
 const { Http, Headers } = require('../util/http/Http');
-const NotionHttp = require('./NotionHttp');
+const Block = require('./Block');
+const NotionController = require('./NotionController');
 
 const generalHeaders = new Headers('Authorization', `Bearer ${NOTION_CONNECTION_TOKEN}`);
 generalHeaders.add('Notion-Version', '2026-03-11');
 
 class Page {
-    #page;
+    #pagePayload;
+    #id;
     #blocks;
 
-    constructor(page) {
-        this.#page = page;
+    constructor(id, blocks, pagePayload) {
+        this.#id = id;
+        this.#blocks = blocks;
+        this.#pagePayload = pagePayload;
     }
 
     static build = async (id) => {
-        const page = await NotionHttp.getPage(id);
+        const pagePayload = await NotionController.getPage(id);
+        const blocks = await Block.fromPage(id);
 
-        return new Page(page);
+        return new Page(id, blocks, pagePayload);
     }
 
-    print = () => {
-        console.log(JSON.stringify(this.#page, null, 2));
-    }
+    getBlocks = () => this.#blocks;
 }
 
 async function test() {
-    const pagina = await Page.build('16471fa4f246805bb5cce4d3e82b026d');
+    const page = await Page.build('16471fa4f246805bb5cce4d3e82b026d');
 
-    pagina.print();
+    page.getBlocks().forEach((block) => {
+        console.log(block.toString() + '\n');
+    })
 }
 
 test();
