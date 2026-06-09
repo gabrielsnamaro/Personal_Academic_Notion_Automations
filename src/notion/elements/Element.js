@@ -18,6 +18,8 @@ class Element {
 
         return result;
     }
+
+    getBlocks = () => this.#blocks;
 }
 
 module.exports = Element;

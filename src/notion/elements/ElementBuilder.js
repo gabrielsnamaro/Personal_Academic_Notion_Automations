@@ -3,35 +3,35 @@ const Task = require('./Task');
 
 class ElementBuilder {
     #page;
-    #candidate;
+    #element;
+    #acceptedTypes;
 
     constructor(page) {
-        this.#candidate = {
-            typeDetermined: false,
-            element: null
-        };
+        this.#element = null;
+        this.#acceptedTypes = new Set();
 
         this.#page = page;
     }
 
     static fromPage = (page) => {
+        page.verifyEndOfPage();
+
         let builder = new ElementBuilder(page);
 
         return builder;
     }
 
     tryTask = () => {
-        if(!this.#candidate.typeDetermined) {
+        this.#acceptedTypes.add('Tarefa');
+
+        if(!this.#buildable()) {
             let allBlocks = this.#page.getBlocks();
+            let actualPointer = this.#page.getElementPointer();
 
             let newBlocks = [];
             let title;
             let topics = [];
             let checks = [];
-
-            let task = null;
-
-            let actualPointer = this.#page.getElementPointer();
 
             if(allBlocks[actualPointer].getType() != 'heading_3') {
                 return this;
@@ -80,20 +80,35 @@ class ElementBuilder {
 
             if(checks.length < 1) return this;
 
-            this.#candidate.element = new Task(title, topics, checks);
+            this.#setElement(new Task(title, topics, checks));
             this.#page.setElementPointer(actualPointer);
-            this.#candidate.typeDetermined = true;
+        }
+
+        return this;
+    }
+
+    #setElement = (element) => this.#element = element;
+
+    acceptGeneric = () => {
+        this.#acceptedTypes.add('Genérico');
+
+        if(!this.#buildable()) {
+            this.#setElement(new Element([ this.#page.getNextBlock() ]));
         }
 
         return this;
     }
 
     build = () => {
-        if(!this.#candidate.typeDetermined) {
-            return new Element([ this.#page.getNextBlock() ]);
-        } else {
-            return this.#candidate.element;
-        }
+        this.#verifyBuildable();
+
+        return this.#element;
+    }
+
+    #buildable = () => !!this.#element;
+
+    #verifyBuildable = () => {
+        if(!this.#buildable()) throw new Error(`Não foi possível extrair nenhum elemento da página ${this.#page.getId()} a partir do cursor ${this.#page.getElementPointer()} que seja de um dos seguintes tipos aceitos: ${[...this.#acceptedTypes]}`);
     }
 }
 

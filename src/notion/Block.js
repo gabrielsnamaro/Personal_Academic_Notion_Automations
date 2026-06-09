@@ -29,10 +29,11 @@ class Block {
     }
 
     toString = () => {
-        return JSON.stringify(this.#payload, null, 2);
+        return `Type: ${this.getType()} | ID: ${this.getId()} `;
     }
 
     getType = () => this.#payload.type;
+    getId = () => this.#payload.id;
 }
 
 module.exports = Block;

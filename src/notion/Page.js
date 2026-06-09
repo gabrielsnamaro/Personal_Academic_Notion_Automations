@@ -30,8 +30,7 @@ class Page {
     getBlocks = () => this.#blocks;
 
     getNextBlock = () => {
-        if(this.#blockPointer >= this.#blocks.length)
-            throw new Error('Não há mais blocos para serem extraídos dessa página. ');
+        this.verifyEndOfPage();
 
         const actual = this.#blocks[this.#blockPointer];
         this.#blockPointer++;
@@ -48,15 +47,47 @@ class Page {
     getNextElement = () => {
         return ElementBuilder.fromPage(this)
             .tryTask()
+            .acceptGeneric()
             .build();
     }
+
+    endOfPage = () => this.#blocks.length <= this.#blockPointer;
+
+    verifyEndOfPage = () => {
+        if(this.endOfPage()) {
+            throw new Error('Não há mais blocos para serem extraídos dessa página. ');
+        }
+    }
+
+    extractRemainingElements = () => {
+        const elements = [];
+
+        while(!this.endOfPage())
+            elements.push(this.getNextElement());
+        
+        return elements;      
+    }
+
+    listAllElements = () => {
+        const cursor = this.#blockPointer;
+        let elements = [];
+
+        this.setElementPointer(0);
+        elements = this.extractRemainingElements();
+        this.setElementPointer(cursor);
+        
+        return elements;
+    }
+
+    getId = () => this.#id;
 }
 
 async function test() {
     const page = await Page.build('31971fa4f24680d190c9dff3e913bd3e');
 
-    console.log(page.getNextElement().toString());
-    console.log(page.getNextElement().toString());
+    page.listAllElements()
+        .map((e) => e.toString())
+        .forEach((e) => console.log(e.toString()));
 }
 
 test();
