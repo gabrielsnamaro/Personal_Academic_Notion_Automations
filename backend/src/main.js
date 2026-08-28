@@ -1,5 +1,10 @@
+const app = require('./server');
+const { PORT } = require('./config');
+
 function start() {
-    console.log('Hello World!\n');
+    app.listen(PORT, () => {
+        console.log(`Backend rodando na porta ${PORT}`);
+    });
 }
 
 start();
