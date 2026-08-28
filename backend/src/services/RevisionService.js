@@ -33,7 +33,6 @@ class RevisionService {
 
         let response;
         try {
-            // Busca todos os blocos com paginação
             response = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
         } catch (err) {
             if (err.message.includes('404')) {
@@ -60,7 +59,6 @@ class RevisionService {
                 }
             }];
             await NotionApiService.appendBlocks(NOTION_TARGET_PAGE_ID, headingPayload);
-            // Busca de novo para pegar a página com o novo heading
             const newRes = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
             blocks.splice(0, blocks.length, ...newRes.results);
             revisoesIndex = blocks.findIndex(b => b.type.startsWith('heading_') && b[b.type].rich_text.some(rt => rt.plain_text.toLowerCase().includes('revisões marcadas')));
@@ -70,7 +68,6 @@ class RevisionService {
         const allClusters = [];
         const blocksToDelete = [];
 
-        // Extrai todas as revisões existentes
         for (let i = startIndex; i < blocks.length; i++) {
             const b = blocks[i];
             if (b.type === 'heading_3') {
@@ -111,14 +108,19 @@ class RevisionService {
             }
         }
 
-        // Constrói os payloads das novas revisões
         for (const rev of revisions) {
             const dayStr = String(rev.date.getDate()).padStart(2, '0');
             const monthStr = String(rev.date.getMonth() + 1).padStart(2, '0');
             
             const bulletBlocks = atividades.map((atv, idx) => {
                 const richTextArray = [{ type: 'text', text: { content: `${atv}. ` } }];
-                if (idx === 0) richTextArray.push({ type: 'text', text: { content: 'Revisão' }, annotations: { bold: true, italic: true } });
+                if (idx === 0) {
+                    richTextArray.push({ 
+                        type: 'text', 
+                        text: { content: 'Revisão' }, 
+                        annotations: { bold: true, italic: true, color: 'gray_background' } 
+                    });
+                }
                 return { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: richTextArray } };
             });
 
@@ -129,8 +131,11 @@ class RevisionService {
                     heading_3: {
                         rich_text: [
                             { type: 'text', text: { content: `${materia} ` } },
-                            { type: 'text', text: { content: '[autônomo] ' } },
-                            { type: 'text', text: { content: `(${dayStr}/${monthStr})` }, annotations: { italic: true } }
+                            { type: 'text', text: { content: '[' }, annotations: { code: true, color: 'gray' } },
+                            { type: 'text', text: { content: 'autônomo' }, annotations: { code: true, color: 'yellow' } },
+                            { type: 'text', text: { content: ']' }, annotations: { code: true, color: 'gray' } },
+                            { type: 'text', text: { content: ' ' }, annotations: { color: 'gray' } },
+                            { type: 'text', text: { content: `(${dayStr}/${monthStr})` }, annotations: { italic: true, color: 'gray' } }
                         ]
                     }
                 },
@@ -139,7 +144,10 @@ class RevisionService {
                     object: 'block',
                     type: 'to_do',
                     to_do: {
-                        rich_text: [{ type: 'text', text: { content: 'Terminado! ✔' }, annotations: { italic: true } }],
+                        rich_text: [
+                            { type: 'text', text: { content: 'Terminado! ' }, annotations: { italic: true, color: 'gray' } },
+                            { type: 'text', text: { content: '✔' }, annotations: { bold: true, italic: true, color: 'gray' } }
+                        ],
                         checked: false
                     }
                 }
@@ -151,14 +159,10 @@ class RevisionService {
             });
         }
 
-        // Ordena tudo pela data
         allClusters.sort((a, b) => a.date - b.date);
 
-        // Achata os payloads em um único array (até 100 blocos)
         const flatPayloads = allClusters.flatMap(c => c.payloads);
 
-        // Deleta os blocos antigos um por um para não tomar rate limit excessivo
-        // Chunk requests in 3 parallel deletions per second (Notion allows 3 req/sec)
         for (let i = 0; i < blocksToDelete.length; i += 3) {
             const chunk = blocksToDelete.slice(i, i + 3);
             await Promise.all(chunk.map(id => NotionApiService.deleteBlock(id)));
@@ -167,7 +171,6 @@ class RevisionService {
             }
         }
 
-        // Injeta os blocos novos na ordem correta, em chunks de 100 (limite da API do Notion)
         for (let i = 0; i < flatPayloads.length; i += 100) {
             const chunk = flatPayloads.slice(i, i + 100);
             await NotionApiService.appendBlocks(NOTION_TARGET_PAGE_ID, chunk);
