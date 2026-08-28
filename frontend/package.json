@@ -1,0 +1,10 @@
+﻿{
+  "name": "notion-automation-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frontend para visualização e controle das automações do Notion",
+  "scripts": {
+    "dev": "echo \"Frontend dev script\"",
+    "build": "echo \"Frontend build script\""
+  }
+}

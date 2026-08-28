@@ -1,29 +1,17 @@
-{
-  "name": "notion-automation",
+﻿{
+  "name": "personal-academic-notion-automations",
   "version": "1.0.0",
-  "description": "Automação geral da minha página de organização acadêmica no Notion",
-  "homepage": "https://github.com/gabrielsnamaro/Personal_Academic_Notion_Automations#readme",
-  "bugs": {
-    "url": "https://github.com/gabrielsnamaro/Personal_Academic_Notion_Automations/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/gabrielsnamaro/Personal_Academic_Notion_Automations.git"
-  },
-  "license": "ISC",
-  "author": "Gabriel Silva Neiva Amaro",
-  "type": "commonjs",
-  "main": "dist/index.js",
+  "private": true,
+  "description": "Automação geral da página de organização acadêmica no Notion (Backend e Frontend)",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start:backend": "npm --prefix backend start",
+    "dev:backend": "npm --prefix backend run dev",
+    "test:backend": "npm --prefix backend test"
   },
-  "devDependencies": {
-    "@types/dotenv": "^6.1.1",
-    "@types/node": "^25.6.0",
-    "ts-node": "^10.9.2",
-    "tsx": "^4.21.0"
-  },
-  "dependencies": {
-    "dotenv": "^17.4.2"
-  }
+  "author": "Gabriel Silva Neiva Amaro",
+  "license": "ISC"
 }
