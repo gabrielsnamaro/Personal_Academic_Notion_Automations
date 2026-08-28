@@ -6,7 +6,7 @@
       </div>
       <div className="flex items-center gap-2">
          <img src="/favicon-32x32.png" alt="Logo" className="w-5 h-5 rounded-sm" />
-         <span className="text-sm font-semibold text-notion-text">Notion Automations</span>
+         <span className="text-sm font-semibold text-notion-text">Notion Dynamic Manager</span>
       </div>
     </header>
   );

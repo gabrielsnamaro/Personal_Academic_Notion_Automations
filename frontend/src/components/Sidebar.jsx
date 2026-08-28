@@ -6,7 +6,7 @@ export default function Sidebar({ currentTab, setCurrentTab, onLogout }) {
       <div>
         <div className="flex items-center gap-2 p-4 m-2">
           <img src="/favicon-32x32.png" alt="Logo" className="w-6 h-6 rounded-sm" />
-          <span className="text-sm font-semibold text-notion-text tracking-wide">Notion Automations</span>
+          <span className="text-sm font-semibold text-notion-text tracking-wide">Notion Dynamic Manager</span>
         </div>
 
         <nav className="px-2 space-y-1">
