@@ -1,6 +1,13 @@
-﻿@tailwind base;
-@tailwind components;
-@tailwind utilities;
+﻿@import "tailwindcss";
+
+@theme {
+  --color-notion-bg: #ffffff;
+  --color-notion-sidebar: #fbfbfa;
+  --color-notion-text: #37352f;
+  --color-notion-muted: #787774;
+  --color-notion-border: #e9e9e7;
+  --color-notion-hover: #efefef;
+}
 
 @layer base {
   body {
@@ -10,6 +17,6 @@
 
 /* Custom Checkbox */
 input[type="checkbox"] {
-  @apply w-4 h-4 rounded-sm border-gray-300 text-gray-800 focus:ring-gray-800 cursor-pointer;
+  @apply w-4 h-4 rounded-sm border-gray-300 text-gray-800 cursor-pointer;
   accent-color: #37352f;
 }
