@@ -1,4 +1,4 @@
-const NotionController = require("./NotionController");
+const NotionApiService = require("../../services/NotionApiService");
 
 function minimizePayload(blockPayload) {
     const { id, type } = blockPayload;
@@ -16,7 +16,7 @@ class Block {
     }
 
     static fromPage = async (id) => {
-        const response = await NotionController.getPageBlocks(id);
+        const response = await NotionApiService.getPageBlocks(id);
         const results = response?.results || [];
 
         const blocks = [];

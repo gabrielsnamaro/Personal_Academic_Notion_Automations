@@ -1,6 +1,6 @@
-﻿const Block = require('./Block');
-const ElementBuilder = require('./elements/ElementBuilder');
-const NotionController = require('./NotionController');
+const Block = require('./Block');
+const ElementBuilder = require('./parsers/ElementBuilder');
+const NotionApiService = require('../../services/NotionApiService');
 
 class Page {
     #pagePayload;
@@ -16,7 +16,7 @@ class Page {
     }
 
     static build = async (id) => {
-        const pagePayload = await NotionController.getPage(id);
+        const pagePayload = await NotionApiService.getPage(id);
         const blocks = await Block.fromPage(id);
 
         return new Page(id, blocks, pagePayload);

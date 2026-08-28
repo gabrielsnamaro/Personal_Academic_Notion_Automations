@@ -1,5 +1,5 @@
-﻿const Element = require('./Element');
-const Task = require('./Task');
+const Element = require('../elements/Element');
+const Task = require('../elements/Task');
 
 class TaskParser {
     parse(page) {
