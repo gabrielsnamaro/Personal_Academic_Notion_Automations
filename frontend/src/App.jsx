@@ -5,23 +5,31 @@ import './App.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Basic check: Se tiver token no localStorage, consideramos logado.
-    // Em produção, o ideal é validar a expiração do JWT.
     const token = localStorage.getItem('auth_token');
+    const savedUser = localStorage.getItem('auth_user');
+    
     if (token) {
       setIsAuthenticated(true);
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+      }
     }
   }, []);
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = (userData) => {
     setIsAuthenticated(true);
+    setUser(userData);
+    localStorage.setItem('auth_user', JSON.stringify(userData));
   };
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
     setIsAuthenticated(false);
+    setUser(null);
   };
 
   return (
@@ -29,7 +37,7 @@ function App() {
       {!isAuthenticated ? (
         <Login onLoginSuccess={handleLoginSuccess} />
       ) : (
-        <Dashboard onLogout={handleLogout} />
+        <Dashboard user={user} onLogout={handleLogout} />
       )}
     </>
   );
