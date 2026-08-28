@@ -1,4 +1,4 @@
-﻿import { LayoutDashboard, BookOpen, Settings, ChevronsLeft, CircleUserRound, CalendarClock } from 'lucide-react';
+﻿import { LayoutDashboard, ChevronsLeft, CalendarClock } from 'lucide-react';
 
 export default function Sidebar({ user, currentTab, setCurrentTab }) {
   return (
@@ -6,7 +6,7 @@ export default function Sidebar({ user, currentTab, setCurrentTab }) {
       <div>
         <div className="flex items-center gap-2 p-4 hover:bg-notion-hover cursor-pointer transition-colors m-2 rounded-md">
           <img src={user?.picture || ''} alt="Profile" className="w-6 h-6 rounded-sm bg-gray-200" />
-          <span className="text-sm font-medium truncate">{user?.name || 'User'}</span>
+          <span className="text-sm font-medium truncate text-notion-text">{user?.name || 'User'}</span>
         </div>
 
         <nav className="px-2 mt-4 space-y-1">
@@ -16,7 +16,7 @@ export default function Sidebar({ user, currentTab, setCurrentTab }) {
             className={`flex items-center gap-3 px-3 py-1.5 rounded-md text-sm transition-colors ${currentTab === 'dashboard' ? 'bg-gray-200 font-medium text-notion-text' : 'hover:bg-notion-hover text-notion-muted'}`}
           >
             <LayoutDashboard size={18} className={currentTab === 'dashboard' ? 'text-notion-text' : ''} />
-            Dashboard
+            Painel Geral
           </a>
           
           <a 
@@ -25,16 +25,7 @@ export default function Sidebar({ user, currentTab, setCurrentTab }) {
             className={`flex items-center gap-3 px-3 py-1.5 rounded-md text-sm transition-colors ${currentTab === 'revisions' ? 'bg-gray-200 font-medium text-notion-text' : 'hover:bg-notion-hover text-notion-muted'}`}
           >
             <CalendarClock size={18} className={currentTab === 'revisions' ? 'text-notion-text' : ''} />
-            Cadastrar Revisões
-          </a>
-
-          <a href="#" className="flex items-center gap-3 px-3 py-1.5 hover:bg-notion-hover rounded-md text-sm text-notion-muted transition-colors">
-            <BookOpen size={18} />
-            College Tasks
-          </a>
-          <a href="#" className="flex items-center gap-3 px-3 py-1.5 hover:bg-notion-hover rounded-md text-sm text-notion-muted transition-colors">
-            <Settings size={18} />
-            Settings
+            Revisões Espaçadas
           </a>
         </nav>
       </div>
@@ -42,7 +33,7 @@ export default function Sidebar({ user, currentTab, setCurrentTab }) {
       <div className="p-4 border-t border-notion-border">
         <button className="flex items-center gap-2 text-xs font-medium text-notion-muted hover:bg-notion-hover w-full px-2 py-1.5 rounded transition-colors">
           <ChevronsLeft size={16} />
-          Collapse sidebar
+          Recolher menu
         </button>
       </div>
     </aside>

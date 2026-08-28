@@ -2,23 +2,12 @@
 import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import TaskBlock from './components/TaskBlock';
 import RevisionForm from './components/RevisionForm';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-const mockTasks = [
-  {
-    id: 1,
-    title: 'Linear Algebra',
-    topics: ['Matrix transformations', 'Eigenvalues and eigenvectors', 'Inner product spaces'],
-    checks: ['Complete practice problems', 'Review lecture notes']
-  }
-];
-
 export default function Dashboard({ user, onLogout }) {
-  const [tasks, setTasks] = useState(mockTasks);
-  const [currentTab, setCurrentTab] = useState('dashboard'); // 'dashboard' ou 'revisions'
+  const [currentTab, setCurrentTab] = useState('revisions'); // Começa na aba de Revisões por padrão
 
   const handleSync = async () => {
     try {
@@ -26,10 +15,10 @@ export default function Dashboard({ user, onLogout }) {
       const res = await axios.get(`${API_URL}/notion/status`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert(`Sincronização do painel executada com sucesso! Usuário: ${res.data.user}`);
+      alert(`Conexão com a API do backend Notion bem-sucedida! Usuário autenticado: ${res.data.user}`);
     } catch (error) {
       console.error(error);
-      alert("Erro de autorização.");
+      alert("Erro de autorização ou falha no backend.");
       if (error.response?.status === 401) {
           onLogout();
       }
@@ -49,15 +38,24 @@ export default function Dashboard({ user, onLogout }) {
             {currentTab === 'dashboard' && (
               <>
                 <div className="mb-12">
-                  <h1 className="text-4xl font-bold mb-3 tracking-tight">Task Manager</h1>
+                  <h1 className="text-4xl font-bold mb-3 tracking-tight">Painel de Automações</h1>
                   <p className="text-[15px] text-notion-muted font-medium">
-                    Organize lectures, assignments, and study logs directly in your minimalist central workspace.
+                    Gerencie suas integrações e rotinas de estudo diretamente no Notion.
                   </p>
                 </div>
-                <div className="flex flex-col">
-                  {tasks.map((task) => (
-                    <TaskBlock key={task.id} title={task.title} topics={task.topics} checks={task.checks} />
-                  ))}
+
+                <div className="bg-white border border-notion-border rounded-lg shadow-sm p-6 max-w-2xl">
+                  <h2 className="text-lg font-bold text-notion-text mb-2">Status do Sistema</h2>
+                  <p className="text-sm text-notion-muted mb-4">
+                    Bem-vindo! No momento, as automações estão focadas no planejamento e organização da sua "Curva de Esquecimento".
+                  </p>
+                  
+                  <div className="flex items-center justify-between border-t border-notion-border pt-4 mt-2">
+                    <span className="text-sm font-medium text-notion-text">Módulo Ativo</span>
+                    <span className="text-xs font-semibold px-2 py-1 bg-green-100 text-green-700 rounded-md">
+                      Revisões Espaçadas
+                    </span>
+                  </div>
                 </div>
               </>
             )}
@@ -65,9 +63,9 @@ export default function Dashboard({ user, onLogout }) {
             {currentTab === 'revisions' && (
               <>
                 <div className="mb-12">
-                  <h1 className="text-4xl font-bold mb-3 tracking-tight">Automação de Revisões</h1>
+                  <h1 className="text-4xl font-bold mb-3 tracking-tight">Revisões Espaçadas</h1>
                   <p className="text-[15px] text-notion-muted font-medium">
-                    Aplique o método Spaced Repetition. O sistema organizará os blocos cronologicamente na sua página.
+                    Agende tópicos de estudo para o 1º, 7º e 30º dia.
                   </p>
                 </div>
                 <RevisionForm />
