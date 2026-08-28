@@ -8,6 +8,7 @@
     "frontend"
   ],
   "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "start:backend": "npm --prefix backend start",
     "dev:backend": "npm --prefix backend run dev",
     "test:backend": "npm --prefix backend test",
@@ -16,5 +17,8 @@
     "lint:frontend": "npm --prefix frontend run lint"
   },
   "author": "Gabriel Silva Neiva Amaro",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
 }

@@ -1,4 +1,4 @@
-﻿const { OAuth2Client } = require('google-auth-library');
+const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const { GOOGLE_OAUTH_CLIENT_ID, AUTHORIZED_EMAIL, JWT_SECRET } = require('../config');
 
@@ -20,12 +20,15 @@ class AuthController {
             });
 
             const payload = ticket.getPayload();
-            const email = payload.email;
+            const email = payload.email.toLowerCase().trim();
+            const expectedEmail = (AUTHORIZED_EMAIL || "").toLowerCase().trim();
+
+            console.log(`[AUTH DEBUG] E-mail do Google: '${email}' | Esperado na .env: '${expectedEmail}'`);
 
             // Sistema de Allowlist sem banco de dados
-            if (email !== AUTHORIZED_EMAIL) {
+            if (email !== expectedEmail) {
                 console.warn(`Tentativa de acesso não autorizada pelo e-mail: ${email}`);
-                return res.status(403).json({ error: "Acesso Negado: E-mail não autorizado." });
+                return res.status(403).json({ error: `Acesso Negado: O e-mail ${email} não está autorizado.` });
             }
 
             // Gera o JWT local (validade de 24h)

@@ -1,11 +1,6 @@
-const { NOTION_CONNECTION_TOKEN } = require('../config');
-const { Http, Headers } = require('../util/http/Http');
-const Block = require('./Block');
+﻿const Block = require('./Block');
 const ElementBuilder = require('./elements/ElementBuilder');
 const NotionController = require('./NotionController');
-
-const generalHeaders = new Headers('Authorization', `Bearer ${NOTION_CONNECTION_TOKEN}`);
-generalHeaders.add('Notion-Version', '2026-03-11');
 
 class Page {
     #pagePayload;
@@ -55,7 +50,7 @@ class Page {
 
     verifyEndOfPage = () => {
         if(this.endOfPage()) {
-            throw new Error('Não há mais blocos para serem extraídos dessa página. ');
+            throw new Error('Não há mais blocos para serem extraídos dessa página.');
         }
     }
 
@@ -81,15 +76,5 @@ class Page {
 
     getId = () => this.#id;
 }
-
-async function test() {
-    const page = await Page.build('31971fa4f24680d190c9dff3e913bd3e');
-
-    page.listAllElements()
-        .map((e) => e.toString())
-        .forEach((e) => console.log(e.toString()));
-}
-
-test();
 
 module.exports = Page;
