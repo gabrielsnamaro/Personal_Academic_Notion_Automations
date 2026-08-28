@@ -1,11 +1,12 @@
-﻿import { LayoutDashboard, ChevronsLeft, CalendarClock } from 'lucide-react';
+﻿import { LayoutDashboard, LogOut, CalendarClock } from 'lucide-react';
 
-export default function Sidebar({ currentTab, setCurrentTab }) {
+export default function Sidebar({ currentTab, setCurrentTab, onLogout }) {
   return (
     <aside className="w-64 h-screen bg-notion-sidebar border-r border-notion-border flex flex-col justify-between shrink-0">
       <div>
-        <div className="p-4 m-2">
-          <span className="text-sm font-semibold text-notion-text tracking-wide">Workspace</span>
+        <div className="flex items-center gap-2 p-4 m-2">
+          <img src="/favicon-32x32.png" alt="Logo" className="w-6 h-6 rounded-sm" />
+          <span className="text-sm font-semibold text-notion-text tracking-wide">Notion Automations</span>
         </div>
 
         <nav className="px-2 space-y-1">
@@ -30,9 +31,12 @@ export default function Sidebar({ currentTab, setCurrentTab }) {
       </div>
 
       <div className="p-4 border-t border-notion-border">
-        <button className="flex items-center gap-2 text-xs font-medium text-notion-muted hover:bg-notion-hover w-full px-2 py-1.5 rounded transition-colors">
-          <ChevronsLeft size={16} />
-          Recolher menu
+        <button 
+          onClick={onLogout}
+          className="flex items-center gap-2 text-xs font-medium text-red-500 hover:bg-red-50 w-full px-2 py-1.5 rounded transition-colors"
+        >
+          <LogOut size={16} />
+          Sair da Aplicação
         </button>
       </div>
     </aside>

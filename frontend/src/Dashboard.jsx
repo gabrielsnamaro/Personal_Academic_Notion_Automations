@@ -1,36 +1,17 @@
-﻿import axios from 'axios';
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import RevisionForm from './components/RevisionForm';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
 export default function Dashboard({ onLogout }) {
   const [currentTab, setCurrentTab] = useState('revisions');
 
-  const handleSync = async () => {
-    try {
-      const token = localStorage.getItem('auth_token');
-      const res = await axios.get(`${API_URL}/notion/status`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert(`Conexão com a API do backend Notion bem-sucedida! Status: Ativo`);
-    } catch (error) {
-      console.error(error);
-      alert("Erro de autorização ou falha no backend.");
-      if (error.response?.status === 401) {
-          onLogout();
-      }
-    }
-  };
-
   return (
     <div className="flex h-screen bg-white text-notion-text">
-      <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />
+      <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} onLogout={onLogout} />
       
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        <Header onSync={handleSync} />
+        <Header />
         
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-12 py-16">
