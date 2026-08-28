@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const cors = require('cors');
 const { FRONTEND_URL } = require('./config');
 
@@ -18,5 +18,6 @@ app.use(express.json());
 // Registro de Rotas
 app.use('/api/auth', authRoutes);
 app.use('/api/notion', notionRoutes);
+app.use('/api/notion/revisions', require('./routes/revisions.routes'));
 
 module.exports = app;

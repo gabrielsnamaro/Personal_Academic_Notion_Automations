@@ -18,6 +18,7 @@ function getEnv(name, fallback = null, required = true) {
 const COLLEGE_TASKS_PAGE_ID = getEnv('COLLEGE_TASKS_PAGE_ID');
 const NOTION_CONNECTION_TOKEN = getEnv('NOTION_CONNECTION_TOKEN');
 const NOTION_BASE_URL = 'https://api.notion.com/v1';
+const NOTION_TARGET_PAGE_ID = getEnv('NOTION_TARGET_PAGE_ID', null, false);
 
 const GOOGLE_OAUTH_CLIENT_ID = getEnv('GOOGLE_OAUTH_CLIENT_ID', null, false);
 const GOOGLE_OAUTH_CLIENT_SECRET = getEnv('GOOGLE_OAUTH_CLIENT_SECRET', null, false);
@@ -35,5 +36,6 @@ module.exports = {
     AUTHORIZED_EMAIL,
     JWT_SECRET,
     PORT,
-    FRONTEND_URL
+    FRONTEND_URL,
+    NOTION_TARGET_PAGE_ID
 }
