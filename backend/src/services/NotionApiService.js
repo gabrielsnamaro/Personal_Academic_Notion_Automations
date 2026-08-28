@@ -13,8 +13,22 @@ class NotionApiService {
     }
 
     static getPageBlocks = async (pageId) => {
-        const url = `${NOTION_BASE_URL}/blocks/${pageId}/children`;
-        return await Http.get(url, null, generalHeaders);
+        let allBlocks = [];
+        let hasMore = true;
+        let nextCursor = undefined;
+        
+        while (hasMore) {
+            let url = `${NOTION_BASE_URL}/blocks/${pageId}/children`;
+            if (nextCursor) {
+                url += `?start_cursor=${nextCursor}`;
+            }
+            const data = await Http.get(url, null, generalHeaders);
+            allBlocks = allBlocks.concat(data.results);
+            hasMore = data.has_more;
+            nextCursor = data.next_cursor;
+        }
+
+        return { results: allBlocks };
     }
 
     static appendBlocks = async (parentId, children, afterBlockId = null) => {
@@ -24,6 +38,11 @@ class NotionApiService {
             payload.after = afterBlockId;
         }
         return await Http.patch(url, payload, null, jsonHeaders);
+    }
+
+    static deleteBlock = async (blockId) => {
+        const url = `${NOTION_BASE_URL}/blocks/${blockId}`;
+        return await Http.delete(url, null, generalHeaders);
     }
 }
 

@@ -1,4 +1,4 @@
-class Headers {
+﻿class Headers {
     #headers;
 
     constructor(name = null, value = null, headers = []) {
@@ -82,8 +82,14 @@ async function request(method, url, payload = undefined, headers = new Headers()
 
         const res = await fetch(url, options);
 
-        if(!res.ok)
-            throw new Error(`HTTP ${res.status}`);
+        if(!res.ok) {
+            let errorMsg = `HTTP ${res.status}`;
+            try {
+                const errBody = await res.json();
+                errorMsg += ` - ${JSON.stringify(errBody)}`;
+            } catch(e) {}
+            throw new Error(errorMsg);
+        }
 
         return await res.json();
     } catch(err) {
@@ -91,6 +97,7 @@ async function request(method, url, payload = undefined, headers = new Headers()
         throw err;
     }
 }
+
 
 function insertQueryParams(url, params = []) {
     if(!params) return url;
@@ -110,7 +117,7 @@ function insertQueryParams(url, params = []) {
 
 function validateHeaders(headers) {
     if(!(headers instanceof Headers))
-        throw new Error('Cabeçalhos inválidos. ');
+        throw new Error('CabeÃ§alhos invÃ¡lidos. ');
 
     return headers;
 }

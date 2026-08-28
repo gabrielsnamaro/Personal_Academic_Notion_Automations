@@ -1,6 +1,16 @@
 ﻿const NotionApiService = require('./NotionApiService');
 const { NOTION_TARGET_PAGE_ID } = require('../config');
 
+// Função auxiliar para esperar e evitar rate limit
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
+function extractPayload(b) {
+    if (b.type === 'heading_3') return { object: 'block', type: 'heading_3', heading_3: { rich_text: b.heading_3.rich_text } };
+    if (b.type === 'bulleted_list_item') return { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: b.bulleted_list_item.rich_text } };
+    if (b.type === 'to_do') return { object: 'block', type: 'to_do', to_do: { rich_text: b.to_do.rich_text, checked: b.to_do.checked } };
+    return null;
+}
+
 class RevisionService {
     static async scheduleRevisions(materia, atividades, dataFormalizacao) {
         if (!NOTION_TARGET_PAGE_ID || NOTION_TARGET_PAGE_ID === 'null') {
@@ -16,13 +26,14 @@ class RevisionService {
         const rev30 = new Date(baseDate); rev30.setDate(rev30.getDate() + 30);
 
         const revisions = [
-            { date: rev1, type: "Revisão 1 dia" },
-            { date: rev7, type: "Revisão 7 dias" },
-            { date: rev30, type: "Revisão 30 dias" }
+            { date: rev1 },
+            { date: rev7 },
+            { date: rev30 }
         ];
 
         let response;
         try {
+            // Busca todos os blocos com paginação
             response = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
         } catch (err) {
             if (err.message.includes('404')) {
@@ -33,15 +44,11 @@ class RevisionService {
 
         const blocks = response.results;
 
-        // Procura a seção de revisões de forma mais resiliente
         let revisoesIndex = blocks.findIndex(b => 
             b.type.startsWith('heading_') && 
             b[b.type].rich_text.some(rt => rt.plain_text.toLowerCase().includes('revisões marcadas'))
         );
 
-        let revSectionId = null;
-
-        // Se não encontrar a seção, nós a criamos no final da página!
         if (revisoesIndex === -1) {
             const headingPayload = [{
                 object: 'block',
@@ -52,83 +59,70 @@ class RevisionService {
                     ]
                 }
             }];
-            const hRes = await NotionApiService.appendBlocks(NOTION_TARGET_PAGE_ID, headingPayload);
-            revSectionId = hRes.results[0].id;
-        } else {
-            revSectionId = blocks[revisoesIndex].id;
+            await NotionApiService.appendBlocks(NOTION_TARGET_PAGE_ID, headingPayload);
+            // Busca de novo para pegar a página com o novo heading
+            const newRes = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
+            blocks.splice(0, blocks.length, ...newRes.results);
+            revisoesIndex = blocks.findIndex(b => b.type.startsWith('heading_') && b[b.type].rich_text.some(rt => rt.plain_text.toLowerCase().includes('revisões marcadas')));
         }
 
-        let startIndex = revisoesIndex !== -1 ? revisoesIndex + 1 : blocks.length;
+        const startIndex = revisoesIndex + 1;
+        const allClusters = [];
+        const blocksToDelete = [];
 
-        // Mapeia todas as revisões existentes para um array ordenado na memória
-        const existingRevisions = [];
-        
+        // Extrai todas as revisões existentes
         for (let i = startIndex; i < blocks.length; i++) {
             const b = blocks[i];
             if (b.type === 'heading_3') {
                 const text = b.heading_3.rich_text.map(rt => rt.plain_text).join('');
-                
-                // Regex mais flexível: captura dd/mm independente de asteriscos ou parênteses vizinhos
                 const match = text.match(/(\d{2})\/(\d{2})/);
                 if (match) {
                     const day = parseInt(match[1]);
                     const month = parseInt(match[2]);
                     
-                    // Tratativa de virada de ano: se a data base é Dezembro e a revisão é Janeiro
                     let revYear = baseYear;
-                    if (month - 1 < 3 && baseMonth > 8) {
-                        revYear++; 
-                    }
+                    if (month - 1 < 3 && baseMonth > 8) revYear++; 
 
                     const revDate = new Date(revYear, month - 1, day, 12, 0, 0);
                     
-                    // Precisamos achar o último bloco dessa revisão específica
                     let lastBlockIndex = i;
+                    const clusterPayloads = [extractPayload(b)];
+                    blocksToDelete.push(b.id);
+
                     while (lastBlockIndex + 1 < blocks.length) {
                         const nextType = blocks[lastBlockIndex + 1].type;
                         if (nextType === 'bulleted_list_item' || nextType === 'to_do') {
                             lastBlockIndex++;
+                            const childBlock = blocks[lastBlockIndex];
+                            clusterPayloads.push(extractPayload(childBlock));
+                            blocksToDelete.push(childBlock.id);
                         } else {
                             break;
                         }
                     }
 
-                    existingRevisions.push({
-                        lastBlockId: blocks[lastBlockIndex].id,
-                        date: revDate
+                    allClusters.push({
+                        date: revDate,
+                        payloads: clusterPayloads.filter(p => p !== null)
                     });
                     
-                    // Pula i para não reprocessar
                     i = lastBlockIndex;
                 }
             }
         }
-        
-        // Garante ordenação local inicial
-        existingRevisions.sort((a, b) => a.date - b.date);
 
-        // Insere as 3 novas revisões dinamicamente
+        // Constrói os payloads das novas revisões
         for (const rev of revisions) {
             const dayStr = String(rev.date.getDate()).padStart(2, '0');
             const monthStr = String(rev.date.getMonth() + 1).padStart(2, '0');
             
             const bulletBlocks = atividades.map((atv, idx) => {
-                const richTextArray = [
-                    { type: 'text', text: { content: `${atv}. ` } }
-                ];
-                if (idx === 0) {
-                    richTextArray.push({ type: 'text', text: { content: 'Revisão' }, annotations: { bold: true, italic: true } });
-                }
-                return {
-                    object: 'block',
-                    type: 'bulleted_list_item',
-                    bulleted_list_item: {
-                        rich_text: richTextArray
-                    }
-                };
+                const richTextArray = [{ type: 'text', text: { content: `${atv}. ` } }];
+                if (idx === 0) richTextArray.push({ type: 'text', text: { content: 'Revisão' }, annotations: { bold: true, italic: true } });
+                return { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: richTextArray } };
             });
 
-            const payloadBlocks = [
+            const newPayloads = [
                 {
                     object: 'block',
                     type: 'heading_3',
@@ -136,7 +130,6 @@ class RevisionService {
                         rich_text: [
                             { type: 'text', text: { content: `${materia} ` } },
                             { type: 'text', text: { content: '[autônomo] ' } },
-                            // Notion aplica o Markdown, então se mandar literal vira bagunça. Vamos usar só texto puro com anotação.
                             { type: 'text', text: { content: `(${dayStr}/${monthStr})` }, annotations: { italic: true } }
                         ]
                     }
@@ -146,40 +139,44 @@ class RevisionService {
                     object: 'block',
                     type: 'to_do',
                     to_do: {
-                        rich_text: [
-                            { type: 'text', text: { content: 'Terminado! ✔' }, annotations: { italic: true } }
-                        ],
+                        rich_text: [{ type: 'text', text: { content: 'Terminado! ✔' }, annotations: { italic: true } }],
                         checked: false
                     }
                 }
             ];
 
-            // Encontra o ponto de inserção com base na lista em memória
-            let targetBlockId = revSectionId;
-            for (const existing of existingRevisions) {
-                if (existing.date <= rev.date) {
-                    targetBlockId = existing.lastBlockId;
-                } else {
-                    break;
-                }
-            }
-
-            // Injeta na API
-            const res = await NotionApiService.appendBlocks(NOTION_TARGET_PAGE_ID, payloadBlocks, targetBlockId);
-            
-            // Pega o ID do ÚLTIMO bloco inserido na resposta
-            const newLastBlockId = res.results[res.results.length - 1].id;
-
-            // Adiciona a nova revisão à lista em memória e reordena!
-            // Isso garante que se a próxima revisão tiver que entrar APÓS essa, ela achará o bloco correto.
-            existingRevisions.push({
-                lastBlockId: newLastBlockId,
-                date: rev.date
+            allClusters.push({
+                date: rev.date,
+                payloads: newPayloads
             });
-            existingRevisions.sort((a, b) => a.date - b.date);
         }
 
-        return { success: true, message: "Revisões geradas com sucesso!" };
+        // Ordena tudo pela data
+        allClusters.sort((a, b) => a.date - b.date);
+
+        // Achata os payloads em um único array (até 100 blocos)
+        const flatPayloads = allClusters.flatMap(c => c.payloads);
+
+        // Deleta os blocos antigos um por um para não tomar rate limit excessivo
+        // Chunk requests in 3 parallel deletions per second (Notion allows 3 req/sec)
+        for (let i = 0; i < blocksToDelete.length; i += 3) {
+            const chunk = blocksToDelete.slice(i, i + 3);
+            await Promise.all(chunk.map(id => NotionApiService.deleteBlock(id)));
+            if (i + 3 < blocksToDelete.length) {
+                await delay(1100);
+            }
+        }
+
+        // Injeta os blocos novos na ordem correta, em chunks de 100 (limite da API do Notion)
+        for (let i = 0; i < flatPayloads.length; i += 100) {
+            const chunk = flatPayloads.slice(i, i + 100);
+            await NotionApiService.appendBlocks(NOTION_TARGET_PAGE_ID, chunk);
+            if (i + 100 < flatPayloads.length) {
+                await delay(1100);
+            }
+        }
+
+        return { success: true, message: "Revisões ordenadas e geradas com sucesso!" };
     }
 }
 
