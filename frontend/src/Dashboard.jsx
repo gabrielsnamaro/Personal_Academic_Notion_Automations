@@ -6,8 +6,8 @@ import RevisionForm from './components/RevisionForm';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-export default function Dashboard({ user, onLogout }) {
-  const [currentTab, setCurrentTab] = useState('revisions'); // Começa na aba de Revisões por padrão
+export default function Dashboard({ onLogout }) {
+  const [currentTab, setCurrentTab] = useState('revisions');
 
   const handleSync = async () => {
     try {
@@ -15,7 +15,7 @@ export default function Dashboard({ user, onLogout }) {
       const res = await axios.get(`${API_URL}/notion/status`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert(`Conexão com a API do backend Notion bem-sucedida! Usuário autenticado: ${res.data.user}`);
+      alert(`Conexão com a API do backend Notion bem-sucedida! Status: Ativo`);
     } catch (error) {
       console.error(error);
       alert("Erro de autorização ou falha no backend.");
@@ -27,7 +27,7 @@ export default function Dashboard({ user, onLogout }) {
 
   return (
     <div className="flex h-screen bg-white text-notion-text">
-      <Sidebar user={user} currentTab={currentTab} setCurrentTab={setCurrentTab} />
+      <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />
       
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         <Header onSync={handleSync} />
