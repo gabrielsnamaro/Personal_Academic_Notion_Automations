@@ -1,18 +1,14 @@
 ﻿import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
-import './App.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 function Login({ onLoginSuccess }) {
   const handleSuccess = async (credentialResponse) => {
     try {
-      // Envia o token do Google para o backend
       const res = await axios.post(`${API_URL}/auth/google`, {
         credential: credentialResponse.credential,
       });
-
-      // Salva o token local do backend
       localStorage.setItem('auth_token', res.data.token);
       onLoginSuccess(res.data.user);
     } catch (error) {
@@ -27,16 +23,42 @@ function Login({ onLoginSuccess }) {
   };
 
   return (
-    <div className="login-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      <h1>Notion Dynamic Manager</h1>
-      <p>Acesso restrito. Faça login para continuar.</p>
-      
-      <div style={{ marginTop: '20px' }}>
-        <GoogleLogin
-          onSuccess={handleSuccess}
-          onError={handleError}
-          useOneTap
-        />
+    <div className="min-h-screen bg-[#f7f7f5] flex items-center justify-center p-4 font-sans text-notion-text">
+      <div className="bg-white max-w-[420px] w-full rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-notion-border overflow-hidden flex flex-col">
+        
+        {/* Banner/Cover Decorativo (Estilo página do Notion) */}
+        <div className="h-32 bg-gradient-to-tr from-[#e9e9e7] via-[#f0f0f0] to-[#e4e4e2] w-full relative">
+          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#37352f 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
+        </div>
+
+        {/* Ícone sobreposto */}
+        <div className="px-8 flex flex-col">
+          <div className="w-[72px] h-[72px] bg-white rounded-xl shadow-sm border border-notion-border flex items-center justify-center -mt-10 mb-5 relative z-10 p-3">
+            <img src="/favicon.svg" alt="Logo" className="w-full h-full object-contain" />
+          </div>
+
+          <h1 className="text-[22px] font-bold tracking-tight mb-2">Notion Dynamic Manager</h1>
+          <p className="text-[14px] text-notion-muted mb-8 leading-relaxed">
+            Seu workspace pessoal para automatizar fluxos de estudo, organizar tarefas e planejar suas revisões ativas.
+          </p>
+
+          <div className="w-full flex justify-center border-t border-notion-border pt-8 pb-4">
+            <GoogleLogin
+              onSuccess={handleSuccess}
+              onError={handleError}
+              useOneTap
+              theme="outline"
+              size="large"
+              text="continue_with"
+              shape="rectangular"
+              width="100%"
+            />
+          </div>
+          
+          <div className="text-center pb-8">
+            <span className="text-[11px] font-medium text-notion-muted/70 uppercase tracking-wider">Acesso restrito (Allowlist)</span>
+          </div>
+        </div>
       </div>
     </div>
   );
