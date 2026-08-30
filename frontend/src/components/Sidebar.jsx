@@ -1,4 +1,5 @@
-import { LayoutDashboard, LogOut, CalendarClock } from 'lucide-react';
+﻿import { LayoutDashboard, LogOut, CalendarClock } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
 export default function Sidebar({ currentTab, setCurrentTab, onLogout }) {
   return (
@@ -9,35 +10,36 @@ export default function Sidebar({ currentTab, setCurrentTab, onLogout }) {
           <span className="text-sm font-semibold text-notion-text tracking-wide">Notion Dynamic Manager</span>
         </div>
 
-        <nav className="px-2 space-y-1">
-          <a 
-            href="#" 
-            onClick={(e) => { e.preventDefault(); setCurrentTab('dashboard'); }}
-            className={`flex items-center gap-3 px-3 py-1.5 rounded-md text-sm transition-colors ${currentTab === 'dashboard' ? 'bg-gray-200 font-medium text-notion-text' : 'hover:bg-notion-hover text-notion-muted'}`}
+        <nav className="px-3 space-y-1">
+          <Button 
+            variant={currentTab === 'dashboard' ? 'secondary' : 'ghost'} 
+            className={`w-full justify-start gap-3 h-9 ${currentTab === 'dashboard' ? 'font-medium' : 'text-notion-muted font-normal hover:bg-notion-hover'}`}
+            onClick={() => setCurrentTab('dashboard')}
           >
-            <LayoutDashboard size={18} className={currentTab === 'dashboard' ? 'text-notion-text' : ''} />
+            <LayoutDashboard size={18} className={currentTab === 'dashboard' ? 'text-notion-text' : 'text-notion-muted'} />
             Painel Geral
-          </a>
+          </Button>
           
-          <a 
-            href="#" 
-            onClick={(e) => { e.preventDefault(); setCurrentTab('revisions'); }}
-            className={`flex items-center gap-3 px-3 py-1.5 rounded-md text-sm transition-colors ${currentTab === 'revisions' ? 'bg-gray-200 font-medium text-notion-text' : 'hover:bg-notion-hover text-notion-muted'}`}
+          <Button 
+            variant={currentTab === 'revisions' ? 'secondary' : 'ghost'} 
+            className={`w-full justify-start gap-3 h-9 ${currentTab === 'revisions' ? 'font-medium' : 'text-notion-muted font-normal hover:bg-notion-hover'}`}
+            onClick={() => setCurrentTab('revisions')}
           >
-            <CalendarClock size={18} className={currentTab === 'revisions' ? 'text-notion-text' : ''} />
+            <CalendarClock size={18} className={currentTab === 'revisions' ? 'text-notion-text' : 'text-notion-muted'} />
             Revisões Espaçadas
-          </a>
+          </Button>
         </nav>
       </div>
 
       <div className="p-4 border-t border-notion-border">
-        <button 
+        <Button 
+          variant="ghost" 
           onClick={onLogout}
-          className="flex items-center gap-2 text-xs font-medium text-red-500 hover:bg-red-50 w-full px-2 py-1.5 rounded transition-colors"
+          className="w-full justify-start gap-2 h-9 text-red-500 hover:text-red-600 hover:bg-red-50 font-medium"
         >
           <LogOut size={16} />
           Sair da Aplicação
-        </button>
+        </Button>
       </div>
     </aside>
   );

@@ -2,6 +2,7 @@
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import RevisionForm from './components/RevisionForm';
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export default function Dashboard({ onLogout }) {
   const [currentTab, setCurrentTab] = useState('revisions');
@@ -25,19 +26,23 @@ export default function Dashboard({ onLogout }) {
                   </p>
                 </div>
 
-                <div className="bg-white border border-notion-border rounded-lg shadow-sm p-6 max-w-2xl">
-                  <h2 className="text-lg font-bold text-notion-text mb-2">Status do Sistema</h2>
-                  <p className="text-sm text-notion-muted mb-4">
-                    Bem-vindo! No momento, as automações estão focadas no planejamento e organização da sua "Curva de Esquecimento".
-                  </p>
-                  
-                  <div className="flex items-center justify-between border-t border-notion-border pt-4 mt-2">
-                    <span className="text-sm font-medium text-notion-text">Módulo Ativo</span>
-                    <span className="text-xs font-semibold px-2 py-1 bg-green-100 text-green-700 rounded-md">
-                      Revisões Espaçadas
-                    </span>
-                  </div>
-                </div>
+                <Card className="max-w-2xl border-notion-border shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold text-notion-text">Status do Sistema</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-notion-muted mb-4">
+                      Bem-vindo! No momento, as automações estão focadas no planejamento e organização da sua "Curva de Esquecimento".
+                    </p>
+                    
+                    <div className="flex items-center justify-between border-t border-notion-border pt-4 mt-2">
+                      <span className="text-sm font-medium text-notion-text">Módulo Ativo</span>
+                      <span className="text-xs font-semibold px-2 py-1 bg-green-100 text-green-700 rounded-md">
+                        Revisões Espaçadas
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
               </>
             )}
 

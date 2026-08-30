@@ -2,17 +2,21 @@
 import axios from 'axios';
 import { Calendar, BookOpen, Send, Plus, X, CalendarCheck2 } from 'lucide-react';
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export default function RevisionForm() {
   const [materia, setMateria] = useState('');
-  const [atividades, setAtividades] = useState(['']); // Array de tópicos
+  const [atividades, setAtividades] = useState(['']); // Array de topicos
   const [dataFormalizacao, setDataFormalizacao] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
   const handleSetToday = () => {
-    // Pega a data atual no formato YYYY-MM-DD local
     const today = new Date();
     const tzOffset = today.getTimezoneOffset() * 60000; 
     const localISOTime = (new Date(today - tzOffset)).toISOString().split('T')[0];
@@ -41,7 +45,6 @@ export default function RevisionForm() {
     setLoading(true);
     setMessage(null);
 
-    // Filtra tópicos vazios
     const atividadesFiltradas = atividades.filter(a => a.trim() !== '');
     if (atividadesFiltradas.length === 0) {
       setMessage({ type: 'error', text: 'Adicione pelo menos um tópico válido.' });
@@ -73,99 +76,109 @@ export default function RevisionForm() {
   };
 
   return (
-    <div className="bg-white border border-notion-border rounded-lg shadow-sm p-6 max-w-2xl mb-12">
-      <h2 className="text-xl font-bold text-notion-text mb-1">Cadastrar Revisão (Curva de Esquecimento)</h2>
-      <p className="text-sm text-notion-muted mb-6">Esta automação irá injetar 3 revisões em sua página, preservando a ordem cronológica estrita da seção "# Revisões marcadas".</p>
+    <Card className="max-w-2xl mb-12 shadow-sm border-notion-border rounded-xl">
+      <CardHeader>
+        <CardTitle className="text-xl font-bold text-notion-text">Cadastrar Revisão (Curva de Esquecimento)</CardTitle>
+        <CardDescription className="text-sm text-notion-muted">
+          Esta automação irá injetar 3 revisões em sua página, preservando a ordem cronológica estrita da seção "# Revisões marcadas".
+        </CardDescription>
+      </CardHeader>
       
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-notion-text mb-1 flex items-center gap-2">
-            <BookOpen size={16} className="text-notion-muted" /> Matéria
-          </label>
-          <input 
-            type="text"
-            required
-            value={materia}
-            onChange={e => setMateria(e.target.value)}
-            placeholder="Ex: Teoria dos Grafos e Computabilidade"
-            className="w-full px-3 py-2 border border-notion-border rounded-md text-sm outline-none focus:border-gray-400 transition-colors"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-notion-text mb-2">
-            Atividades / Tópicos
-          </label>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            {atividades.map((atv, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <input 
-                  type="text"
-                  required
-                  value={atv}
-                  onChange={e => updateAtividade(idx, e.target.value)}
-                  placeholder={`Tópico ${idx + 1}`}
-                  className="flex-1 px-3 py-2 border border-notion-border rounded-md text-sm outline-none focus:border-gray-400 transition-colors"
-                />
-                {atividades.length > 1 && (
-                  <button 
-                    type="button" 
-                    onClick={() => removeAtividade(idx)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                  >
-                    <X size={18} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          <button 
-            type="button" 
-            onClick={addAtividade}
-            className="mt-2 flex items-center gap-1 text-sm font-medium text-notion-muted hover:text-notion-text transition-colors"
-          >
-            <Plus size={16} /> Adicionar tópico
-          </button>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-notion-text mb-1 flex items-center gap-2">
-            <Calendar size={16} className="text-notion-muted" /> Data de Formalização (Estudo Inicial)
-          </label>
-          <div className="flex gap-2">
-            <input 
-              type="date"
+            <Label className="flex items-center gap-2 text-notion-text font-medium">
+              <BookOpen size={16} className="text-notion-muted" /> Matéria
+            </Label>
+            <Input 
+              type="text"
               required
-              value={dataFormalizacao}
-              onChange={e => setDataFormalizacao(e.target.value)}
-              className="flex-1 px-3 py-2 border border-notion-border rounded-md text-sm outline-none focus:border-gray-400 transition-colors"
+              value={materia}
+              onChange={e => setMateria(e.target.value)}
+              placeholder="Ex: Teoria dos Grafos e Computabilidade"
+              className="border-notion-border focus-visible:ring-gray-300"
             />
-            <button 
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-notion-text font-medium block">
+              Atividades / Tópicos
+            </Label>
+            <div className="space-y-3">
+              {atividades.map((atv, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Input 
+                    type="text"
+                    required
+                    value={atv}
+                    onChange={e => updateAtividade(idx, e.target.value)}
+                    placeholder={`Tópico ${idx + 1}`}
+                    className="border-notion-border focus-visible:ring-gray-300"
+                  />
+                  {atividades.length > 1 && (
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => removeAtividade(idx)}
+                      className="text-gray-400 hover:text-red-500 hover:bg-red-50 shrink-0"
+                    >
+                      <X size={18} />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <Button 
               type="button" 
-              onClick={handleSetToday}
-              className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-notion-text px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              variant="ghost"
+              size="sm"
+              onClick={addAtividade}
+              className="mt-1 h-8 px-2 text-notion-muted hover:text-notion-text flex items-center gap-1"
             >
-              <CalendarCheck2 size={16} />
-              Hoje
-            </button>
+              <Plus size={16} /> Adicionar tópico
+            </Button>
           </div>
-        </div>
 
-        <button 
-          type="submit" 
-          disabled={loading}
-          className="w-full mt-6 flex items-center justify-center gap-2 bg-[#2f2f2f] hover:bg-[#1a1a1a] text-white text-sm font-medium px-4 py-2.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Sincronizando com o Notion...' : 'Confirmar Agendamentos'}
-          {!loading && <Send size={16} />}
-        </button>
-
-        {message && (
-          <div className={`p-3 rounded-md text-sm font-medium ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-            {message.text}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-notion-text font-medium">
+              <Calendar size={16} className="text-notion-muted" /> Data de Formalização (Estudo Inicial)
+            </Label>
+            <div className="flex gap-2">
+              <Input 
+                type="date"
+                required
+                value={dataFormalizacao}
+                onChange={e => setDataFormalizacao(e.target.value)}
+                className="border-notion-border focus-visible:ring-gray-300"
+              />
+              <Button 
+                type="button" 
+                variant="secondary"
+                onClick={handleSetToday}
+                className="flex items-center gap-2"
+              >
+                <CalendarCheck2 size={16} /> Hoje
+              </Button>
+            </div>
           </div>
-        )}
-      </form>
-    </div>
+
+          <Button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-[#2f2f2f] hover:bg-[#1a1a1a] text-white"
+          >
+            {loading ? 'Sincronizando com o Notion...' : 'Confirmar Agendamentos'}
+            {!loading && <Send size={16} className="ml-2" />}
+          </Button>
+
+          {message && (
+            <div className={`p-3 rounded-md text-sm font-medium ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+              {message.text}
+            </div>
+          )}
+        </form>
+      </CardContent>
+    </Card>
   );
 }

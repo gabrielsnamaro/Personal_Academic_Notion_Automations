@@ -1,5 +1,6 @@
-import { GoogleLogin } from '@react-oauth/google';
+﻿import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
+import { Card } from "@/components/ui/card";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -24,7 +25,7 @@ function Login({ onLoginSuccess }) {
 
   return (
     <div className="min-h-screen bg-[#f7f7f5] flex items-center justify-center p-4 font-sans text-notion-text">
-      <div className="bg-white max-w-[420px] w-full rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-notion-border overflow-hidden flex flex-col">
+      <Card className="max-w-[420px] w-full rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-notion-border overflow-hidden flex flex-col p-0">
         
         {/* Banner/Cover Decorativo com a imagem personalizada */}
         <div 
@@ -61,7 +62,7 @@ function Login({ onLoginSuccess }) {
             <span className="text-[11px] font-medium text-notion-muted/70 uppercase tracking-wider">Acesso restrito (Allowlist)</span>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
