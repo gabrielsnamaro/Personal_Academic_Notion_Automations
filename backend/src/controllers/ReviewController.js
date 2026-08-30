@@ -3,13 +3,16 @@
 class ReviewController {
     static async scheduleReviews(req, res) {
         try {
-            const { materia, atividades, dataFormalizacao } = req.body;
+            const { materia, atividades, batches, dataFormalizacao } = req.body;
             
-            if (!materia || !atividades || !dataFormalizacao) {
-                return res.status(400).json({ error: "Parâmetros incompletos (materia, atividades, dataFormalizacao)." });
+            // Suporte retrocompatível para requisição única
+            const studyBatches = batches || [{ materia, atividades }];
+            
+            if (!studyBatches || studyBatches.length === 0 || !dataFormalizacao) {
+                return res.status(400).json({ error: "Parâmetros incompletos. Forneça os blocos de estudo e a data de formalização." });
             }
 
-            const result = await ReviewService.scheduleReviews(materia, atividades, dataFormalizacao);
+            const result = await ReviewService.scheduleReviews(studyBatches, dataFormalizacao);
             return res.json(result);
         } catch (error) {
             console.error("Erro no agendamento:", error);

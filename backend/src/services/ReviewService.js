@@ -1,12 +1,12 @@
 ﻿const NotionApiService = require('./NotionApiService');
 const { NOTION_TARGET_PAGE_ID } = require('../config');
 
-// Função auxiliar para esperar e evitar rate limit da API do Notion
+// FunÃ§Ã£o auxiliar para esperar e evitar rate limit da API do Notion
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 /**
- * Extrai o payload base de um bloco existente para que possamos recriá-lo
- * exatamente com a mesma formatação após deletá-lo na ordenação.
+ * Extrai o payload base de um bloco existente para que possamos recriÃ¡-lo
+ * exatamente com a mesma formataÃ§Ã£o apÃ³s deletÃ¡-lo na ordenaÃ§Ã£o.
  */
 function extractPayload(b) {
     if (b.type === 'heading_3') return { object: 'block', type: 'heading_3', heading_3: { rich_text: b.heading_3.rich_text } };
@@ -17,14 +17,13 @@ function extractPayload(b) {
 
 class ReviewService {
     /**
-     * Entrypoint da automação de repetição espaçada (Spaced Repetition Review).
-     * Coordena o fluxo de buscar, mesclar e re-escrever blocos de estudo.
+     * Entrypoint da automaÃ§Ã£o de repetiÃ§Ã£o espaÃ§ada (Spaced Repetition Review).
+     * Coordena o fluxo de buscar, mesclar e re-escrever blocos de estudo em lote.
      * 
-     * @param {string} materia Nome da disciplina/tópico
-     * @param {string[]} atividades Array com os subtópicos a revisar
+     * @param {Object[]} studyBatches Array de objetos { materia, atividades }
      * @param {string} dataFormalizacao Data inicial do estudo (YYYY-MM-DD)
      */
-    static async scheduleReviews(materia, atividades, dataFormalizacao) {
+    static async scheduleReviews(studyBatches, dataFormalizacao) {
         this._validateConfig();
 
         const revisions = this._calculateReviewDates(dataFormalizacao);
@@ -33,28 +32,28 @@ class ReviewService {
         
         const { allClusters, blocksToDelete } = this._extractExistingReviews(blocks, startIndex, dataFormalizacao);
         
-        this._buildNewReviews(allClusters, revisions, materia, atividades);
+        this._buildNewReviews(allClusters, revisions, studyBatches);
 
-        // Ordena todos os blocos antigos e os novos em ordem cronológica de estudo
+        // Ordena todos os blocos antigos e os novos em ordem cronolÃ³gica de estudo
         allClusters.sort((a, b) => a.date - b.date);
         const flatPayloads = allClusters.flatMap(c => c.payloads);
 
         await this._replaceBlocks(blocksToDelete, flatPayloads);
 
-        return { success: true, message: "Revisões ordenadas e geradas com sucesso!" };
+        return { success: true, message: "RevisÃµes ordenadas e geradas com sucesso!" };
     }
 
     /**
-     * Valida se a configuração base do Notion foi preenchida no .env.
+     * Valida se a configuraÃ§Ã£o base do Notion foi preenchida no .env.
      */
     static _validateConfig() {
         if (!NOTION_TARGET_PAGE_ID || NOTION_TARGET_PAGE_ID === 'null') {
-            throw new Error("NOTION_TARGET_PAGE_ID não está configurado no arquivo .env");
+            throw new Error("NOTION_TARGET_PAGE_ID nÃ£o estÃ¡ configurado no arquivo .env");
         }
     }
 
     /**
-     * Calcula as três datas da Curva do Esquecimento: +1 dia, +7 dias, +30 dias.
+     * Calcula as trÃªs datas da Curva do Esquecimento: +1 dia, +7 dias, +30 dias.
      */
     static _calculateReviewDates(dataFormalizacao) {
         const baseDate = new Date(`${dataFormalizacao}T12:00:00`);
@@ -65,7 +64,7 @@ class ReviewService {
     }
 
     /**
-     * Busca todos os blocos atuais da página alvo.
+     * Busca todos os blocos atuais da pÃ¡gina alvo.
      */
     static async _fetchPageBlocks() {
         try {
@@ -73,20 +72,20 @@ class ReviewService {
             return response.results;
         } catch (err) {
             if (err.message.includes('404')) {
-                throw new Error("Notion API 404: Página não encontrada. Verifique o NOTION_TARGET_PAGE_ID no .env e as permissões.");
+                throw new Error("Notion API 404: PÃ¡gina nÃ£o encontrada. Verifique o NOTION_TARGET_PAGE_ID no .env e as permissÃµes.");
             }
             throw err;
         }
     }
 
     /**
-     * Verifica se o cabeçalho "Revisões marcadas" existe na página.
-     * Caso contrário, ele é criado. Retorna o índice do bloco onde as revisões começam.
+     * Verifica se o cabeÃ§alho "RevisÃµes marcadas" existe na pÃ¡gina.
+     * Caso contrÃ¡rio, ele Ã© criado. Retorna o Ã­ndice do bloco onde as revisÃµes comeÃ§am.
      */
     static async _ensureTargetHeading(blocks) {
         let headingIndex = blocks.findIndex(b => 
             b.type.startsWith('heading_') && 
-            b[b.type].rich_text.some(rt => rt.plain_text.toLowerCase().includes('revisões marcadas'))
+            b[b.type].rich_text.some(rt => rt.plain_text.toLowerCase().includes('revisÃµes marcadas'))
         );
 
         if (headingIndex === -1) {
@@ -95,23 +94,23 @@ class ReviewService {
                 type: 'heading_1',
                 heading_1: {
                     rich_text: [
-                        { type: 'text', text: { content: 'Revisões marcadas' }, annotations: { italic: true } }
+                        { type: 'text', text: { content: 'RevisÃµes marcadas' }, annotations: { italic: true } }
                     ]
                 }
             }];
             await NotionApiService.appendBlocks(NOTION_TARGET_PAGE_ID, headingPayload);
             
-            // Recarrega os blocos após a criação para ter o estado realizado
+            // Recarrega os blocos apÃ³s a criaÃ§Ã£o para ter o estado realizado
             const newRes = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
             blocks.splice(0, blocks.length, ...newRes.results);
-            headingIndex = blocks.findIndex(b => b.type.startsWith('heading_') && b[b.type].rich_text.some(rt => rt.plain_text.toLowerCase().includes('revisões marcadas')));
+            headingIndex = blocks.findIndex(b => b.type.startsWith('heading_') && b[b.type].rich_text.some(rt => rt.plain_text.toLowerCase().includes('revisÃµes marcadas')));
         }
         return headingIndex + 1;
     }
 
     /**
-     * Varre a partir do cabeçalho e coleta as revisões que já estavam penduradas na página.
-     * Agrupa os blocos em "Clusters" (Cabeçalho + Lista + ToDo) para não quebrar a ordem.
+     * Varre a partir do cabeÃ§alho e coleta as revisÃµes que jÃ¡ estavam penduradas na pÃ¡gina.
+     * Agrupa os blocos em "Clusters" (CabeÃ§alho + Lista + ToDo) para nÃ£o quebrar a ordem.
      */
     static _extractExistingReviews(blocks, startIndex, dataFormalizacao) {
         const allClusters = [];
@@ -140,7 +139,7 @@ class ReviewService {
                     const clusterPayloads = [extractPayload(b)];
                     blocksToDelete.push(b.id);
 
-                    // Puxa os blocos filhos (a lista de tópicos e o checklist "Terminado?")
+                    // Puxa os blocos filhos (a lista de tÃ³picos e o checklist "Terminado?")
                     while (lastBlockIndex + 1 < blocks.length) {
                         const nextType = blocks[lastBlockIndex + 1].type;
                         if (nextType === 'bulleted_list_item' || nextType === 'to_do') {
@@ -166,68 +165,72 @@ class ReviewService {
     }
 
     /**
-     * Cria os novos blocos de revisão no formato visual de engenharia reversa do Notion
+     * Cria os novos blocos de revisÃ£o no formato visual de engenharia reversa do Notion
      * (com cores de fundo, inline code, e checkbox).
      */
-    static _buildNewReviews(allClusters, revisions, materia, atividades) {
+        static _buildNewReviews(allClusters, revisions, studyBatches) {
         for (const rev of revisions) {
             const dayStr = String(rev.date.getDate()).padStart(2, '0');
             const monthStr = String(rev.date.getMonth() + 1).padStart(2, '0');
             
-            const bulletBlocks = atividades.map((atv, idx) => {
-                const richTextArray = [{ type: 'text', text: { content: `${atv}. ` } }];
-                if (idx === 0) {
-                    richTextArray.push({ 
-                        type: 'text', 
-                        text: { content: 'Revisão' }, 
-                        annotations: { bold: true, italic: true, color: 'gray_background' } 
-                    });
-                }
-                return { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: richTextArray } };
-            });
-
-            const newPayloads = [
-                {
-                    object: 'block',
-                    type: 'heading_3',
-                    heading_3: {
-                        rich_text: [
-                            { type: 'text', text: { content: `${materia} ` } },
-                            { type: 'text', text: { content: '[' }, annotations: { code: true, color: 'gray' } },
-                            { type: 'text', text: { content: 'autônomo' }, annotations: { code: true, color: 'yellow' } },
-                            { type: 'text', text: { content: ']' }, annotations: { code: true, color: 'gray' } },
-                            { type: 'text', text: { content: ' ' }, annotations: { color: 'gray' } },
-                            { type: 'text', text: { content: `(${dayStr}/${monthStr})` }, annotations: { italic: true, color: 'gray' } }
-                        ]
+            for (const batch of studyBatches) {
+                const { materia, atividades } = batch;
+                const bulletBlocks = atividades.map((atv, idx) => {
+                    const richTextArray = [{ type: 'text', text: { content: `${atv}. ` } }];
+                    if (idx === 0) {
+                        richTextArray.push({ 
+                            type: 'text', 
+                            text: { content: 'Revisão' }, 
+                            annotations: { bold: true, italic: true, color: 'gray_background' } 
+                        });
                     }
-                },
-                ...bulletBlocks,
-                {
-                    object: 'block',
-                    type: 'to_do',
-                    to_do: {
-                        rich_text: [
-                            { type: 'text', text: { content: 'Terminado! ' }, annotations: { italic: true, color: 'gray' } },
-                            { type: 'text', text: { content: '?' }, annotations: { bold: true, italic: true, color: 'gray' } }
-                        ],
-                        checked: false
-                    }
-                }
-            ];
+                    return { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: richTextArray } };
+                });
 
-            allClusters.push({
-                date: rev.date,
-                payloads: newPayloads
-            });
+                const newPayloads = [
+                    {
+                        object: 'block',
+                        type: 'heading_3',
+                        heading_3: {
+                            rich_text: [
+                                { type: 'text', text: { content: `${materia} ` } },
+                                { type: 'text', text: { content: '[' }, annotations: { code: true, color: 'gray' } },
+                                { type: 'text', text: { content: 'autônomo' }, annotations: { code: true, color: 'yellow' } },
+                                { type: 'text', text: { content: ']' }, annotations: { code: true, color: 'gray' } },
+                                { type: 'text', text: { content: ' ' }, annotations: { color: 'gray' } },
+                                { type: 'text', text: { content: `(${dayStr}/${monthStr})` }, annotations: { italic: true, color: 'gray' } }
+                            ]
+                        }
+                    },
+                    ...bulletBlocks,
+                    {
+                        object: 'block',
+                        type: 'to_do',
+                        to_do: {
+                            rich_text: [
+                                { type: 'text', text: { content: 'Terminado! ' }, annotations: { italic: true, color: 'gray' } },
+                                { type: 'text', text: { content: '?' }, annotations: { bold: true, italic: true, color: 'gray' } }
+                            ],
+                            checked: false
+                        }
+                    }
+                ];
+
+                allClusters.push({
+                    date: rev.date,
+                    payloads: newPayloads
+                });
+            }
         }
     }
 
+
     /**
      * Remove todos os blocos desordenados em pequenos lotes e, em seguida,
-     * insere a lista completa perfeitamente cronológica no fim do documento.
+     * insere a lista completa perfeitamente cronolÃ³gica no fim do documento.
      */
     static async _replaceBlocks(blocksToDelete, flatPayloads) {
-        // Deleta em chunks de 3 para não explodir o rate limit de ~3 req/s do Notion
+        // Deleta em chunks de 3 para nÃ£o explodir o rate limit de ~3 req/s do Notion
         for (let i = 0; i < blocksToDelete.length; i += 3) {
             const chunk = blocksToDelete.slice(i, i + 3);
             await Promise.all(chunk.map(id => NotionApiService.deleteBlock(id)));
@@ -248,3 +251,4 @@ class ReviewService {
 }
 
 module.exports = ReviewService;
+
