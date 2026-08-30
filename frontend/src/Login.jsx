@@ -36,7 +36,7 @@ function Login({ onLoginSuccess }) {
         {/* Ícone sobreposto */}
         <div className="px-8 flex flex-col">
           <div className="w-[72px] h-[72px] bg-white rounded-xl shadow-sm border border-notion-border flex items-center justify-center -mt-10 mb-5 relative z-10 p-3">
-            <img src="/logo.svg" alt="React Logo" className="w-full h-full object-contain" />
+            <img src="/app-logo.png" alt="Notion Dynamic Manager" className="w-full h-full object-contain" />
           </div>
 
           <h1 className="text-[22px] font-bold tracking-tight mb-2">Notion Dynamic Manager</h1>

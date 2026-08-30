@@ -5,7 +5,7 @@ export default function Header() {
         Navegação / <span className="font-medium text-notion-text">Automações</span>
       </div>
       <div className="flex items-center gap-2">
-         <img src="/logo.svg" alt="React Logo" className="w-5 h-5" />
+         <img src="/app-logo.png" alt="Logo" className="w-5 h-5 rounded-sm" />
          <span className="text-sm font-semibold text-notion-text">Notion Dynamic Manager</span>
       </div>
     </header>

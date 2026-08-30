@@ -5,7 +5,7 @@ export default function Sidebar({ currentTab, setCurrentTab, onLogout }) {
     <aside className="w-64 h-screen bg-notion-sidebar border-r border-notion-border flex flex-col justify-between shrink-0">
       <div>
         <div className="flex items-center gap-2 p-4 m-2">
-          <img src="/logo.svg" alt="React Logo" className="w-6 h-6" />
+          <img src="/app-logo.png" alt="Logo" className="w-6 h-6 rounded-sm" />
           <span className="text-sm font-semibold text-notion-text tracking-wide">Notion Dynamic Manager</span>
         </div>
 
