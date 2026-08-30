@@ -1,0 +1,10 @@
+﻿{
+  "obsidian-auto-logger": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node .agents/scripts/obsidian_logger.js"
+      }
+    ]
+  }
+}
