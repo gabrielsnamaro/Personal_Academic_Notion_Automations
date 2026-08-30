@@ -1,4 +1,4 @@
-﻿import { GoogleLogin } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -26,15 +26,17 @@ function Login({ onLoginSuccess }) {
     <div className="min-h-screen bg-[#f7f7f5] flex items-center justify-center p-4 font-sans text-notion-text">
       <div className="bg-white max-w-[420px] w-full rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-notion-border overflow-hidden flex flex-col">
         
-        {/* Banner/Cover Decorativo (Estilo página do Notion) */}
-        <div className="h-32 bg-gradient-to-tr from-[#e9e9e7] via-[#f0f0f0] to-[#e4e4e2] w-full relative">
-          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#37352f 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
+        {/* Banner/Cover Decorativo com a imagem personalizada */}
+        <div 
+          className="h-36 w-full relative bg-cover bg-center"
+          style={{ backgroundImage: `url('/banner.jpg')` }}
+        >
         </div>
 
         {/* Ícone sobreposto */}
         <div className="px-8 flex flex-col">
           <div className="w-[72px] h-[72px] bg-white rounded-xl shadow-sm border border-notion-border flex items-center justify-center -mt-10 mb-5 relative z-10 p-3">
-            <img src="/favicon.svg" alt="Logo" className="w-full h-full object-contain" />
+            <img src="/logo.svg" alt="React Logo" className="w-full h-full object-contain" />
           </div>
 
           <h1 className="text-[22px] font-bold tracking-tight mb-2">Notion Dynamic Manager</h1>
