@@ -3,39 +3,47 @@ import { Button } from "@/components/ui/button";
 
 export default function Sidebar({ currentTab, setCurrentTab, onLogout }) {
   return (
-    <aside className="w-64 h-screen bg-notion-sidebar border-r border-notion-border flex flex-col justify-between shrink-0">
+    <aside className="w-64 h-screen bg-[#202020] border-r border-[#2d2d2d] flex flex-col justify-between shrink-0 text-white">
       <div>
         <div className="flex items-center gap-2.5 p-4 m-2">
           <img src="/app-logo.png" alt="Logo" className="w-6 h-6 object-contain shrink-0" />
-          <span className="text-sm font-semibold text-notion-text tracking-wide">Notion Dynamic Manager</span>
+          <span className="text-sm font-semibold text-white tracking-wide">Notion Dynamic Manager</span>
         </div>
 
         <nav className="px-3 space-y-1">
           <Button 
-            variant={currentTab === 'dashboard' ? 'secondary' : 'ghost'} 
-            className={`w-full justify-start gap-3 h-9 ${currentTab === 'dashboard' ? 'font-medium' : 'text-notion-muted font-normal hover:bg-notion-hover'}`}
+            variant="ghost" 
+            className={`w-full justify-start gap-3 h-9 transition-colors ${
+              currentTab === 'dashboard' 
+                ? 'bg-white/15 text-white font-medium hover:bg-white/20 hover:text-white' 
+                : 'text-neutral-300 font-normal hover:bg-white/10 hover:text-white'
+            }`}
             onClick={() => setCurrentTab('dashboard')}
           >
-            <LayoutDashboard size={18} className={currentTab === 'dashboard' ? 'text-notion-text' : 'text-notion-muted'} />
+            <LayoutDashboard size={18} className={currentTab === 'dashboard' ? 'text-white' : 'text-neutral-300'} />
             Painel Geral
           </Button>
           
           <Button 
-            variant={currentTab === 'revisions' ? 'secondary' : 'ghost'} 
-            className={`w-full justify-start gap-3 h-9 ${currentTab === 'revisions' ? 'font-medium' : 'text-notion-muted font-normal hover:bg-notion-hover'}`}
+            variant="ghost" 
+            className={`w-full justify-start gap-3 h-9 transition-colors ${
+              currentTab === 'revisions' 
+                ? 'bg-white/15 text-white font-medium hover:bg-white/20 hover:text-white' 
+                : 'text-neutral-300 font-normal hover:bg-white/10 hover:text-white'
+            }`}
             onClick={() => setCurrentTab('revisions')}
           >
-            <CalendarClock size={18} className={currentTab === 'revisions' ? 'text-notion-text' : 'text-notion-muted'} />
+            <CalendarClock size={18} className={currentTab === 'revisions' ? 'text-white' : 'text-neutral-300'} />
             Revisões Espaçadas
           </Button>
         </nav>
       </div>
 
-      <div className="p-4 border-t border-notion-border">
+      <div className="p-4 border-t border-[#2d2d2d]">
         <Button 
           variant="ghost" 
           onClick={onLogout}
-          className="w-full justify-start gap-2 h-9 text-red-500 hover:text-red-600 hover:bg-red-50 font-medium"
+          className="w-full justify-start gap-2 h-9 text-red-400 hover:text-red-300 hover:bg-red-500/10 font-medium"
         >
           <LogOut size={16} />
           Sair da Aplicação
