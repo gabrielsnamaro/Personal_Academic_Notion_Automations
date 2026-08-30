@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import axios from 'axios';
 import { Calendar, BookOpen, Send, Plus, X, CalendarCheck2 } from 'lucide-react';
 
@@ -10,9 +11,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export default function ReviewForm() {
-  const [materia, setMateria] = useState('');
-  const [atividades, setAtividades] = useState(['']); // Array de topicos
-  const [dataFormalizacao, setDataFormalizacao] = useState('');
+  const [materia, setMateria] = useLocalStorage('reviewForm_materia', '');
+  const [atividades, setAtividades] = useLocalStorage('reviewForm_atividades', ['']); // Array de topicos
+  const [dataFormalizacao, setDataFormalizacao] = useLocalStorage('reviewForm_data', '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
