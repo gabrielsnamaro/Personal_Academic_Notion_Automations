@@ -1,11 +1,11 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import axios from 'axios';
 import { Calendar as CalendarIcon, BookOpen, Send, Plus, X, CalendarCheck2, Trash2 } from 'lucide-react';
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -127,16 +127,14 @@ export default function ReviewForm() {
             </Label>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
               <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal border-notion-border bg-white text-notion-text h-9 hover:bg-gray-50",
-                      !dataFormalizacao && "text-muted-foreground"
-                    )}
-                  >
-                    {dataFormalizacao ? format(parseISO(dataFormalizacao), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : <span>Selecione a data</span>}
-                  </Button>
+                <PopoverTrigger 
+                  className={cn(
+                    buttonVariants({ variant: "outline" }),
+                    "w-full justify-start text-left font-normal border-notion-border bg-white text-notion-text h-9 hover:bg-gray-50",
+                    !dataFormalizacao && "text-muted-foreground"
+                  )}
+                >
+                  {dataFormalizacao ? format(parseISO(dataFormalizacao), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : <span>Selecione a data</span>}
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar

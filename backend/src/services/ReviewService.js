@@ -1,4 +1,4 @@
-const { delay } = require('../util/delay');
+//const { delay } = require('../util/delay');
 const NotionApiService = require('./NotionApiService');
 const { NOTION_TARGET_PAGE_ID } = require('../config');
 
@@ -97,10 +97,11 @@ class ReviewService {
      * Caso contrário, ele é criado. Retorna o índice do bloco onde as revisões começam.
      */
     static async _ensureTargetHeading(blocks) {
-        let headingIndex = blocks.findIndex(b => 
-            b.type.startsWith('heading_') && 
-            b[b.type].rich_text.some(rt => rt.plain_text.toLowerCase().includes('revisões marcadas'))
-        );
+        let headingIndex = blocks.findIndex(b => {
+            if (!b.type.startsWith('heading_')) return false;
+            const fullText = b[b.type].rich_text.map(rt => rt.plain_text).join('').toLowerCase();
+            return fullText.includes('revisões marcadas');
+        });
 
         if (headingIndex === -1) {
             const headingPayload = [{
@@ -117,7 +118,11 @@ class ReviewService {
             // Recarrega os blocos após a criação para ter o estado atualizado
             const newRes = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
             blocks.splice(0, blocks.length, ...newRes.results);
-            headingIndex = blocks.findIndex(b => b.type.startsWith('heading_') && b[b.type].rich_text.some(rt => rt.plain_text.toLowerCase().includes('revisões marcadas')));
+            headingIndex = blocks.findIndex(b => {
+                if (!b.type.startsWith('heading_')) return false;
+                const fullText = b[b.type].rich_text.map(rt => rt.plain_text).join('').toLowerCase();
+                return fullText.includes('revisões marcadas');
+            });
         }
         return headingIndex + 1;
     }
@@ -223,7 +228,7 @@ class ReviewService {
                         to_do: {
                             rich_text: [
                                 { type: 'text', text: { content: 'Terminado! ' }, annotations: { italic: true, color: 'gray' } },
-                                { type: 'text', text: { content: '?' }, annotations: { bold: true, italic: true, color: 'gray' } }
+                                { type: 'text', text: { content: '✔' }, annotations: { bold: true, italic: true, color: 'gray' } }
                             ],
                             checked: false
                         }
