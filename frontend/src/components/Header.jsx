@@ -1,4 +1,4 @@
-﻿import { Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 export default function Header({ onMenuClick }) {
@@ -16,7 +16,7 @@ export default function Header({ onMenuClick }) {
         </div>
       </div>
       <div className="flex items-center gap-2">
-         <img src="/app-logo.png" alt="Logo" className="w-5 h-5 rounded-sm" />
+         <img src="/app-logo.png" alt="Logo" className="w-5 h-5 object-contain shrink-0" />
          <span className="text-sm font-semibold text-notion-text hidden sm:inline">Notion Dynamic Manager</span>
       </div>
     </header>

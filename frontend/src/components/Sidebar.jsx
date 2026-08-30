@@ -1,12 +1,12 @@
-﻿import { LayoutDashboard, LogOut, CalendarClock } from 'lucide-react';
+import { LayoutDashboard, LogOut, CalendarClock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 
 export default function Sidebar({ currentTab, setCurrentTab, onLogout }) {
   return (
     <aside className="w-64 h-screen bg-notion-sidebar border-r border-notion-border flex flex-col justify-between shrink-0">
       <div>
-        <div className="flex items-center gap-2 p-4 m-2">
-          <img src="/app-logo.png" alt="Logo" className="w-6 h-6 rounded-sm" />
+        <div className="flex items-center gap-2.5 p-4 m-2">
+          <img src="/app-logo.png" alt="Logo" className="w-6 h-6 object-contain shrink-0" />
           <span className="text-sm font-semibold text-notion-text tracking-wide">Notion Dynamic Manager</span>
         </div>
 

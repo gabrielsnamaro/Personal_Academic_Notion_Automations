@@ -1,4 +1,4 @@
-﻿import { GoogleLogin } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import { Card } from "@/components/ui/card";
 
@@ -34,10 +34,10 @@ function Login({ onLoginSuccess }) {
         >
         </div>
 
-        {/* Ícone sobreposto */}
+        {/* Ícone sobreposto e flutuante */}
         <div className="px-8 flex flex-col">
-          <div className="w-[72px] h-[72px] bg-white rounded-xl shadow-sm border border-notion-border flex items-center justify-center -mt-10 mb-5 relative z-10 p-3">
-            <img src="/app-logo.png" alt="Notion Dynamic Manager" className="w-full h-full object-contain" />
+          <div className="w-16 h-16 -mt-8 mb-4 relative z-10">
+            <img src="/app-logo.png" alt="Notion Dynamic Manager" className="w-full h-full object-contain drop-shadow-sm" />
           </div>
 
           <h1 className="text-[22px] font-bold tracking-tight mb-2">Notion Dynamic Manager</h1>
