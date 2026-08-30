@@ -1,4 +1,4 @@
-const { OAuth2Client } = require('google-auth-library');
+﻿const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const { GOOGLE_OAUTH_CLIENT_ID, AUTHORIZED_EMAIL, JWT_SECRET } = require('../config');
 
@@ -7,20 +7,32 @@ const client = new OAuth2Client(GOOGLE_OAUTH_CLIENT_ID);
 class AuthController {
     static loginWithGoogle = async (req, res) => {
         try {
-            const { credential } = req.body;
+            const { credential, access_token } = req.body;
 
-            if (!credential) {
-                return res.status(400).json({ error: "Credencial do Google não fornecida." });
+            let payload;
+
+            if (access_token) {
+                // Autenticação via useGoogleLogin (Popup customizado)
+                const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${access_token}` }
+                });
+                
+                if (!googleRes.ok) {
+                    return res.status(401).json({ error: "Token de acesso do Google inválido." });
+                }
+                payload = await googleRes.json();
+            } else if (credential) {
+                // Autenticação via ID Token
+                const ticket = await client.verifyIdToken({
+                    idToken: credential,
+                    audience: GOOGLE_OAUTH_CLIENT_ID,
+                });
+                payload = ticket.getPayload();
+            } else {
+                return res.status(400).json({ error: "Nenhuma credencial ou token fornecido." });
             }
 
-            // Verifica o token com os servidores do Google
-            const ticket = await client.verifyIdToken({
-                idToken: credential,
-                audience: GOOGLE_OAUTH_CLIENT_ID,
-            });
-
-            const payload = ticket.getPayload();
-            const email = payload.email.toLowerCase().trim();
+            const email = (payload.email || "").toLowerCase().trim();
             const expectedEmail = (AUTHORIZED_EMAIL || "").toLowerCase().trim();
 
             console.log(`[AUTH DEBUG] E-mail do Google: '${email}' | Esperado na .env: '${expectedEmail}'`);
