@@ -1,4 +1,4 @@
-﻿import * as React from "react"
+import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva } from "class-variance-authority";
 
@@ -71,9 +71,9 @@ function Button({
     >
       {isDarkButton && (
         <div 
-          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/button:opacity-100 mix-blend-overlay"
+          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/button:opacity-100"
           style={{
-            background: `radial-gradient(circle 70px at ${mousePos.x}px ${mousePos.y}px, rgba(255,255,255,0.7), transparent 100%)`
+            background: `radial-gradient(circle 80px at ${mousePos.x}px ${mousePos.y}px, rgba(255,255,255,0.28), rgba(255,255,255,0.08) 45%, transparent 80%)`
           }}
         />
       )}
