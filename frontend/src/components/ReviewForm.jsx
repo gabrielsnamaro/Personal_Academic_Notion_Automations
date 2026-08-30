@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-export default function RevisionForm() {
+export default function ReviewForm() {
   const [materia, setMateria] = useState('');
   const [atividades, setAtividades] = useState(['']); // Array de topicos
   const [dataFormalizacao, setDataFormalizacao] = useState('');
@@ -54,7 +54,7 @@ export default function RevisionForm() {
 
     try {
       const token = localStorage.getItem('auth_token');
-      await axios.post(`${API_URL}/notion/revisions`, {
+      await axios.post(`${API_URL}/notion/reviews`, {
         materia,
         atividades: atividadesFiltradas,
         dataFormalizacao

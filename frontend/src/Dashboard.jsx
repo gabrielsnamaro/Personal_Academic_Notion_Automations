@@ -1,11 +1,11 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import RevisionForm from './components/RevisionForm';
+import ReviewForm from './components/ReviewForm';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export default function Dashboard({ onLogout }) {
-  const [currentTab, setCurrentTab] = useState('revisions');
+  const [currentTab, setCurrentTab] = useState('reviews');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -66,7 +66,7 @@ export default function Dashboard({ onLogout }) {
               </>
             )}
 
-            {currentTab === 'revisions' && (
+            {currentTab === 'reviews' && (
               <>
                 <div className="mb-8 md:mb-12">
                   <h1 className="text-2xl md:text-4xl font-bold mb-3 tracking-tight">Revisões Espaçadas</h1>
@@ -74,7 +74,7 @@ export default function Dashboard({ onLogout }) {
                     Agende tópicos de estudo para o 1º, 7º e 30º dia.
                   </p>
                 </div>
-                <RevisionForm />
+                <ReviewForm />
               </>
             )}
             

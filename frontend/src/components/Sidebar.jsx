@@ -27,13 +27,13 @@ export default function Sidebar({ currentTab, setCurrentTab, onLogout }) {
           <Button 
             variant="ghost" 
             className={`w-full justify-start gap-3 h-9 transition-colors ${
-              currentTab === 'revisions' 
+              currentTab === 'reviews' 
                 ? 'bg-white/15 text-white font-medium hover:bg-white/20 hover:text-white' 
                 : 'text-neutral-300 font-normal hover:bg-white/10 hover:text-white'
             }`}
-            onClick={() => setCurrentTab('revisions')}
+            onClick={() => setCurrentTab('reviews')}
           >
-            <CalendarClock size={18} className={currentTab === 'revisions' ? 'text-white' : 'text-neutral-300'} />
+            <CalendarClock size={18} className={currentTab === 'reviews' ? 'text-white' : 'text-neutral-300'} />
             Revisões Espaçadas
           </Button>
         </nav>
