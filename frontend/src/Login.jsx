@@ -24,8 +24,14 @@ function Login({ onLoginSuccess }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f7f5] flex items-center justify-center p-4 font-sans text-notion-text">
-      <Card className="max-w-[420px] w-full rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-notion-border overflow-hidden flex flex-col p-0">
+    <div 
+      className="min-h-screen w-full bg-cover bg-center bg-no-repeat flex items-center justify-center p-4 font-sans text-notion-text relative"
+      style={{ backgroundImage: `url('/login-bg.png')` }}
+    >
+      {/* Overlay sutil para realçar o contraste do card */}
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
+
+      <Card className="max-w-[420px] w-full rounded-xl shadow-2xl border border-notion-border bg-white/95 backdrop-blur-sm overflow-hidden flex flex-col p-0 relative z-10">
         
         {/* Banner/Cover Decorativo com a imagem personalizada */}
         <div 
