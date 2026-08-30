@@ -1,3 +1,4 @@
+﻿import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva } from "class-variance-authority";
 
@@ -8,7 +9,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md relative overflow-hidden after:absolute after:inset-0 after:-translate-x-[150%] after:skew-x-[-15deg] after:animate-[shimmer_2.5s_infinite] after:bg-gradient-to-r after:from-transparent after:via-white/10 hover:after:via-white/20 after:to-transparent after:transition-all after:duration-500",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md relative overflow-hidden",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
@@ -44,13 +45,38 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  children,
+  onMouseMove,
   ...props
 }) {
+  const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setMousePos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+    if (onMouseMove) onMouseMove(e);
+  };
+
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
-      {...props} />
+      onMouseMove={handleMouseMove}
+      {...props}
+    >
+      {variant === 'default' && (
+        <div 
+          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/button:opacity-100 mix-blend-overlay"
+          style={{
+            background: `radial-gradient(circle 60px at ${mousePos.x}px ${mousePos.y}px, rgba(255,255,255,0.4), transparent 100%)`
+          }}
+        />
+      )}
+      {children}
+    </ButtonPrimitive>
   );
 }
 
