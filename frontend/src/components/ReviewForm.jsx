@@ -1,12 +1,17 @@
 ﻿import { useState } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import axios from 'axios';
-import { Calendar, BookOpen, Send, Plus, X, CalendarCheck2, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, BookOpen, Send, Plus, X, CalendarCheck2, Trash2 } from 'lucide-react';
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -29,7 +34,7 @@ export default function ReviewForm() {
 
   const removeBatch = (index) => {
     if (batches.length === 1) {
-      setBatches([{ materia: '', atividades: [''] }]); // Limpa o único se clicar na lixeira
+      setBatches([{ materia: '', atividades: [''] }]);
     } else {
       const newBatches = [...batches];
       newBatches.splice(index, 1);
@@ -68,6 +73,12 @@ export default function ReviewForm() {
     setLoading(true);
     setMessage(null);
 
+    if (!dataFormalizacao) {
+      setMessage({ type: 'error', text: 'Selecione a data de formalização inicial.' });
+      setLoading(false);
+      return;
+    }
+
     const cleanedBatches = batches.map(b => ({
       materia: b.materia,
       atividades: b.atividades.filter(a => a.trim() !== '')
@@ -90,7 +101,6 @@ export default function ReviewForm() {
       
       setMessage({ type: 'success', text: `Revisões em lote agendadas com sucesso no Notion!` });
       setBatches([{ materia: '', atividades: [''] }]);
-      // Opcional: setDataFormalizacao(''); se quiser limpar a data
     } catch (err) {
       console.error(err);
       const errorDetail = err.response?.data?.error || err.message;
@@ -113,21 +123,43 @@ export default function ReviewForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2 mb-6">
             <Label className="flex items-center gap-2 text-notion-text font-medium">
-              <Calendar size={16} className="text-notion-muted" /> Data de Formalização (Estudo Inicial)
+              <CalendarIcon size={16} className="text-notion-muted" /> Data de Formalização (Estudo Inicial)
             </Label>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
-              <Input 
-                type="date"
-                required
-                value={dataFormalizacao}
-                onChange={e => setDataFormalizacao(e.target.value)}
-                className="border-notion-border focus-visible:ring-gray-300 w-full"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal border-notion-border bg-white text-notion-text h-9 hover:bg-gray-50",
+                      !dataFormalizacao && "text-muted-foreground"
+                    )}
+                  >
+                    {dataFormalizacao ? format(parseISO(dataFormalizacao), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : <span>Selecione a data</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dataFormalizacao ? parseISO(dataFormalizacao) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        const tzOffset = date.getTimezoneOffset() * 60000; 
+                        const localISOTime = (new Date(date - tzOffset)).toISOString().split('T')[0];
+                        setDataFormalizacao(localISOTime);
+                      }
+                    }}
+                    initialFocus
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
+
               <Button 
                 type="button" 
                 variant="secondary"
                 onClick={handleSetToday}
-                className="flex items-center gap-2 w-full sm:w-auto"
+                className="flex items-center gap-2 w-full sm:w-auto h-9"
               >
                 <CalendarCheck2 size={16} /> Hoje
               </Button>
@@ -136,13 +168,13 @@ export default function ReviewForm() {
 
           <div className="space-y-6">
             {batches.map((batch, bIndex) => (
-              <div key={bIndex} className="p-4 border border-notion-border rounded-lg bg-gray-50/50 relative">
+              <div key={bIndex} className="p-4 border border-notion-border rounded-lg bg-gray-50/50 relative group/batch">
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   onClick={() => removeBatch(bIndex)}
-                  className="absolute top-2 right-2 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                  className="absolute top-2 right-2 text-gray-400 opacity-0 transition-opacity group-hover/batch:opacity-100 hover:text-red-500 hover:bg-red-50"
                   title="Limpar / Remover Bloco"
                 >
                   <Trash2 size={16} />
@@ -158,7 +190,7 @@ export default function ReviewForm() {
                     value={batch.materia}
                     onChange={e => updateBatchMateria(bIndex, e.target.value)}
                     placeholder="Ex: Teoria dos Grafos e Computabilidade"
-                    className="border-notion-border focus-visible:ring-gray-300 pr-10" // Padding para o botão lixeira
+                    className="border-notion-border focus-visible:ring-gray-300 pr-10 bg-white" 
                   />
                 </div>
 
@@ -175,7 +207,7 @@ export default function ReviewForm() {
                           value={atv}
                           onChange={e => updateBatchAtividade(bIndex, aIndex, e.target.value)}
                           placeholder={`Tópico ${aIndex + 1}`}
-                          className="border-notion-border focus-visible:ring-gray-300"
+                          className="border-notion-border focus-visible:ring-gray-300 bg-white"
                         />
                         {batch.atividades.length > 1 && (
                           <Button 
@@ -208,7 +240,7 @@ export default function ReviewForm() {
           <Button
             type="button"
             variant="outline"
-            className="w-full border-dashed border-2 border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400 bg-transparent"
+            className="w-full border-dashed border-2 border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400 bg-transparent h-10 mt-2"
             onClick={addBatch}
           >
             <Plus size={16} className="mr-2" /> Adicionar outra matéria
@@ -217,7 +249,7 @@ export default function ReviewForm() {
           <Button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-[#2f2f2f] hover:bg-[#1a1a1a] text-white transition-all duration-300 hover:shadow-lg mt-6"
+            className="w-full bg-[#2f2f2f] hover:bg-[#1a1a1a] text-white transition-all duration-300 hover:shadow-lg mt-6 h-11"
           >
             {loading ? 'Sincronizando com o Notion...' : 'Confirmar Agendamentos'}
             {!loading && <Send size={16} className="ml-2" />}
