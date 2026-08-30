@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import { Calendar, BookOpen, Send, Plus, X, CalendarCheck2 } from 'lucide-react';
 
@@ -144,19 +144,19 @@ export default function RevisionForm() {
             <Label className="flex items-center gap-2 text-notion-text font-medium">
               <Calendar size={16} className="text-notion-muted" /> Data de Formalização (Estudo Inicial)
             </Label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
               <Input 
                 type="date"
                 required
                 value={dataFormalizacao}
                 onChange={e => setDataFormalizacao(e.target.value)}
-                className="border-notion-border focus-visible:ring-gray-300"
+                className="border-notion-border focus-visible:ring-gray-300 w-full"
               />
               <Button 
                 type="button" 
                 variant="secondary"
                 onClick={handleSetToday}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 w-full sm:w-auto"
               >
                 <CalendarCheck2 size={16} /> Hoje
               </Button>
@@ -166,7 +166,7 @@ export default function RevisionForm() {
           <Button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-[#2f2f2f] hover:bg-[#1a1a1a] text-white"
+            className="w-full bg-[#2f2f2f] hover:bg-[#1a1a1a] text-white transition-all duration-300 hover:shadow-lg"
           >
             {loading ? 'Sincronizando com o Notion...' : 'Confirmar Agendamentos'}
             {!loading && <Send size={16} className="ml-2" />}
