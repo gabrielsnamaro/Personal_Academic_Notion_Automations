@@ -1,4 +1,4 @@
-//const { delay } = require('../util/delay');
+const { delay } = require('../util/delay');
 const NotionApiService = require('./NotionApiService');
 const { NOTION_TARGET_PAGE_ID } = require('../config');
 
