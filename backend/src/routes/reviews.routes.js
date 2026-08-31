@@ -1,4 +1,4 @@
-﻿const { Router } = require('express');
+const { Router } = require('express');
 const authMiddleware = require('../middlewares/authMiddleware');
 const ReviewController = require('../controllers/ReviewController');
 
@@ -6,5 +6,6 @@ const router = Router();
 
 router.use(authMiddleware);
 router.post('/', ReviewController.scheduleReviews);
+router.get('/', ReviewController.getScheduledReviews);
 
 module.exports = router;

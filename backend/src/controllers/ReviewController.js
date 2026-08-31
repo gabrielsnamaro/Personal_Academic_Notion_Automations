@@ -19,6 +19,22 @@ class ReviewController {
             return res.status(500).json({ error: error.message });
         }
     }
+
+    static async getScheduledReviews(req, res) {
+        try {
+            const NotionApiService = require('../services/NotionApiService');
+            const { NOTION_TARGET_PAGE_ID } = require('../config');
+            
+            const response = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
+            const rawBlocks = response.results;
+
+            const reviews = ReviewService.getScheduledReviews(rawBlocks);
+            return res.json({ reviews });
+        } catch (error) {
+            console.error("Erro ao buscar revisões agendadas:", error);
+            return res.status(500).json({ error: error.message });
+        }
+    }
 }
 
 module.exports = ReviewController;
