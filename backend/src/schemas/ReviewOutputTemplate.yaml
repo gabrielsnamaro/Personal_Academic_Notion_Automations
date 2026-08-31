@@ -1,0 +1,79 @@
+title:
+  object: block
+  type: heading_3
+  heading_3:
+    rich_text:
+      - type: text
+        text: 
+          content: "{{subject}} "
+      - type: text
+        text: 
+          content: "["
+        annotations: 
+          code: true
+          color: "gray"
+      - type: text
+        text: 
+          content: "autônomo"
+        annotations: 
+          code: true
+          color: "yellow"
+      - type: text
+        text: 
+          content: "]"
+        annotations: 
+          code: true
+          color: "gray"
+      - type: text
+        text: 
+          content: " "
+        annotations: 
+          color: "gray"
+      - type: text
+        text: 
+          content: "({{date}})"
+        annotations: 
+          italic: true
+          color: "gray"
+activity_first:
+  object: block
+  type: bulleted_list_item
+  bulleted_list_item:
+    rich_text:
+      - type: text
+        text: 
+          content: "{{activity}}. "
+      - type: text
+        text: 
+          content: "Revisão"
+        annotations: 
+          bold: true
+          italic: true
+          color: "gray_background"
+activity:
+  object: block
+  type: bulleted_list_item
+  bulleted_list_item:
+    rich_text:
+      - type: text
+        text: 
+          content: "{{activity}}. "
+check:
+  object: block
+  type: to_do
+  to_do:
+    rich_text:
+      - type: text
+        text: 
+          content: "Terminado! "
+        annotations: 
+          italic: true
+          color: "gray"
+      - type: text
+        text: 
+          content: "✔"
+        annotations: 
+          bold: true
+          italic: true
+          color: "gray"
+    checked: false
