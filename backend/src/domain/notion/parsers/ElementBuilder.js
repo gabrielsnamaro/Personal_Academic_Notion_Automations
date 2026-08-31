@@ -1,6 +1,6 @@
-const Element = require('../elements/Element');
-const Task = require('../elements/Task');
-const ReviewTask = require('../elements/ReviewTask');
+const Element = require('../Element');
+const Task = require('../Task');
+const ReviewTask = require('../ReviewTask');
 const YamlSchemaParser = require('./YamlSchemaParser');
 
 class GenericParser {

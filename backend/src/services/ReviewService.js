@@ -4,7 +4,7 @@ const { NOTION_TARGET_PAGE_ID } = require('../config');
 const Block = require('../domain/notion/Block');
 const Page = require('../domain/notion/Page');
 const ElementBuilder = require('../domain/notion/parsers/ElementBuilder');
-const ReviewTask = require('../domain/notion/elements/ReviewTask');
+const ReviewTask = require('../domain/notion/ReviewTask');
 
 class ReviewService {
     /**
