@@ -32,8 +32,22 @@ class Block {
         return `Type: ${this.getType()} | ID: ${this.getId()} `;
     }
 
+    getPlainText = () => {
+        const wrapper = this.#payload.content_wrapper;
+        if (wrapper && wrapper.rich_text) {
+            return wrapper.rich_text.map(rt => rt.text?.content || rt.plain_text || '').join('');
+        }
+        return '';
+    }
+
+    getCheckedStatus = () => {
+        const wrapper = this.#payload.content_wrapper;
+        return wrapper && wrapper.checked === true;
+    }
+
     getType = () => this.#payload.type;
     getId = () => this.#payload.id;
+    getRawPayload = () => this.#payload; // Export raw for rebuilding if necessary
 }
 
 module.exports = Block;

@@ -1,5 +1,6 @@
-﻿const Element = require('../elements/Element');
+const Element = require('../elements/Element');
 const Task = require('../elements/Task');
+const ReviewTask = require('../elements/ReviewTask');
 const YamlSchemaParser = require('./YamlSchemaParser');
 
 class GenericParser {
@@ -30,6 +31,16 @@ class ElementBuilder {
         });
         
         this.#parsers.push(taskParser);
+        return this;
+    }
+
+    tryReviewTask() {
+        // Usa o novo schema focado em revisões
+        const reviewParser = new YamlSchemaParser('ReviewTemplate.yaml', (parsedMap) => {
+            return new ReviewTask(parsedMap.title, parsedMap.topics, parsedMap.checks);
+        });
+        
+        this.#parsers.push(reviewParser);
         return this;
     }
 

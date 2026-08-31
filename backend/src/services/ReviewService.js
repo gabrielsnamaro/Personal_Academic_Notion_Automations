@@ -1,6 +1,10 @@
 const { delay } = require('../util/delay');
 const NotionApiService = require('./NotionApiService');
 const { NOTION_TARGET_PAGE_ID } = require('../config');
+const Block = require('../domain/notion/Block');
+const Page = require('../domain/notion/Page');
+const ElementBuilder = require('../domain/notion/parsers/ElementBuilder');
+const ReviewTask = require('../domain/notion/elements/ReviewTask');
 
 function extractPayload(block) {
     const type = block.type;
@@ -51,7 +55,6 @@ class ReviewService {
         try {
             console.log(`[ReviewService] Iniciando processamento em lote. Matérias recebidas: ${studyBatches.length}`);
             
-            // 1. Calcular datas das revisões baseadas na data de formalização
             const baseDate = new Date(`${dataFormalizacao}T12:00:00`);
             const revisions = [
                 { offset: 1, date: new Date(baseDate.getTime() + 1 * 24 * 60 * 60 * 1000) },
@@ -59,27 +62,35 @@ class ReviewService {
                 { offset: 30, date: new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000) }
             ];
 
-            // 2. Extrair toda a página do Notion
             const res = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
-            const blocks = res.results;
+            const rawBlocks = res.results;
 
-            // 3. Identificar ou criar o cabeçalho base de revisões
-            const startIndex = await this._ensureTargetHeading(blocks);
+            const startIndex = await this._ensureTargetHeading(rawBlocks);
 
-            // 4. Coletar e parsear os blocos de revisão existentes para não perder os agendamentos antigos
-            const { allClusters, blocksToDelete } = this._extractExistingReviews(blocks, startIndex, dataFormalizacao);
+            // Abstração de Domínio
+            const domainBlocks = rawBlocks.map(b => new Block(b));
+            const page = new Page(NOTION_TARGET_PAGE_ID, domainBlocks, null);
 
-            // 5. Injetar as novas revisões em lote (batch) na nossa lista em memória
-            this._buildNewReviews(allClusters, revisions, studyBatches);
+            // Coletar e fazer parsing dos clusters de revisão existentes
+            const { allClusters, blocksToDelete } = this._extractExistingReviews(page, startIndex);
 
-            // 6. Ordenar estritamente de forma cronológica (a mais próxima no topo)
+            // Injetar as novas revisões gerando seus payloads nativos usando o próprio Modelo
+            for (const rev of revisions) {
+                for (const batch of studyBatches) {
+                    allClusters.push({
+                        date: rev.date,
+                        payloads: ReviewTask.buildNotionPayload(batch.materia, rev.date, batch.atividades)
+                    });
+                }
+            }
+
+            // Ordenar estritamente de forma cronológica (a mais próxima no topo)
             allClusters.sort((a, b) => a.date - b.date);
 
-            // Achatar os clusters para um array plano de payloads nativos da API do Notion
             const flatPayloads = [];
             allClusters.forEach(cluster => flatPayloads.push(...cluster.payloads));
 
-            // 7. Aplicar as alterações destrutivas de deleção e reinserção
+            // Aplicar as alterações destrutivas de deleção e reinserção
             await this._replaceBlocks(blocksToDelete, flatPayloads);
 
             return { success: true, message: "Revisões injetadas, organizadas e ordenadas cronologicamente com sucesso." };
@@ -93,15 +104,95 @@ class ReviewService {
     }
 
     /**
-     * Verifica se o cabeçalho "Revisões marcadas" existe na página.
-     * Caso contrário, ele é criado. Retorna o índice do bloco onde as revisões começam.
+     * Retorna as revisões agendadas na página estruturadas como tasks (DTOs pro frontend).
+     * @param {Object[]} rawBlocks - Todos os blocos retornados da página do Notion
+     * @returns {Object[]} Array formatado
      */
-    static async _ensureTargetHeading(blocks) {
-        let headingIndex = blocks.findIndex(b => {
+    static getScheduledReviews(rawBlocks) {
+        const headingIndex = this._findRevisionsHeadingIndex(rawBlocks);
+        if (headingIndex === -1) return [];
+
+        const domainBlocks = rawBlocks.map(b => new Block(b));
+        const page = new Page(NOTION_TARGET_PAGE_ID, domainBlocks, null);
+        page.setElementPointer(headingIndex + 1);
+
+        const reviews = [];
+
+        while (!page.endOfPage()) {
+            try {
+                const element = ElementBuilder.fromPage(page).tryReviewTask().build();
+                
+                if (element instanceof ReviewTask) {
+                    const date = element.getScheduledDate();
+                    if (date) {
+                        reviews.push({
+                            materia: element.getSubject(),
+                            date: date,
+                            atividades: element.getActivities(),
+                            done: element.isCompleted()
+                        });
+                    }
+                }
+            } catch (err) {
+                // O Builder não encontrou uma ReviewTask a partir deste bloco.
+                // Consumimos um bloco "lixo" e tentamos novamente no próximo passo do cursor.
+                page.getNextBlock();
+            }
+        }
+        
+        return reviews;
+    }
+
+    /**
+     * Varre a partir do cursor e usa o Parser do Domínio para identificar clusters completos.
+     */
+    static _extractExistingReviews(page, startIndex) {
+        const allClusters = [];
+        const blocksToDelete = [];
+        
+        page.setElementPointer(startIndex);
+
+        while (!page.endOfPage()) {
+            try {
+                const element = ElementBuilder.fromPage(page).tryReviewTask().build();
+
+                if (element instanceof ReviewTask) {
+                    const date = element.getScheduledDate();
+                    
+                    if (date) {
+                        const clusterPayloads = element.getBlocks().map(b => {
+                            blocksToDelete.push(b.getId());
+                            return extractPayload(b.getRawPayload());
+                        }).filter(p => p !== null);
+
+                        allClusters.push({ date, payloads: clusterPayloads });
+                    }
+                }
+            } catch (err) {
+                page.getNextBlock();
+            }
+        }
+
+        return { allClusters, blocksToDelete };
+    }
+
+    /**
+     * Localiza o índice exato do cabeçalho de seção "Revisões marcadas".
+     */
+    static _findRevisionsHeadingIndex(blocks) {
+        return blocks.findIndex(b => {
             if (!b.type.startsWith('heading_')) return false;
             const fullText = b[b.type].rich_text.map(rt => rt.plain_text).join('').toLowerCase();
             return fullText.includes('revisões marcadas');
         });
+    }
+
+    /**
+     * Verifica se o cabeçalho "Revisões marcadas" existe na página.
+     * Caso contrário, ele é criado. Retorna o índice do bloco onde as revisões começam.
+     */
+    static async _ensureTargetHeading(rawBlocks) {
+        let headingIndex = this._findRevisionsHeadingIndex(rawBlocks);
 
         if (headingIndex === -1) {
             const headingPayload = [{
@@ -115,141 +206,18 @@ class ReviewService {
             }];
             await NotionApiService.appendBlocks(NOTION_TARGET_PAGE_ID, headingPayload);
             
-            // Recarrega os blocos após a criação para ter o estado atualizado
             const newRes = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
-            blocks.splice(0, blocks.length, ...newRes.results);
-            headingIndex = blocks.findIndex(b => {
-                if (!b.type.startsWith('heading_')) return false;
-                const fullText = b[b.type].rich_text.map(rt => rt.plain_text).join('').toLowerCase();
-                return fullText.includes('revisões marcadas');
-            });
+            rawBlocks.splice(0, rawBlocks.length, ...newRes.results);
+            headingIndex = this._findRevisionsHeadingIndex(rawBlocks);
         }
         return headingIndex + 1;
     }
-
-    /**
-     * Varre a partir do cabeçalho e coleta as revisões que já estavam penduradas na página.
-     * Agrupa os blocos em "Clusters" (Cabeçalho + Lista + ToDo) para não quebrar a ordem.
-     */
-    static _extractExistingReviews(blocks, startIndex, dataFormalizacao) {
-        const allClusters = [];
-        const blocksToDelete = [];
-        
-        const baseDate = new Date(`${dataFormalizacao}T12:00:00`);
-        const baseYear = baseDate.getFullYear();
-        const baseMonth = baseDate.getMonth();
-
-        for (let i = startIndex; i < blocks.length; i++) {
-            const b = blocks[i];
-            if (b.type === 'heading_3') {
-                const text = b.heading_3.rich_text.map(rt => rt.plain_text).join('');
-                const match = text.match(/(\d{2})\/(\d{2})/);
-                
-                if (match) {
-                    const day = parseInt(match[1]);
-                    const month = parseInt(match[2]);
-                    
-                    let revYear = baseYear;
-                    if (month - 1 < 3 && baseMonth > 8) revYear++; 
-
-                    const revDate = new Date(revYear, month - 1, day, 12, 0, 0);
-                    
-                    let lastBlockIndex = i;
-                    const clusterPayloads = [extractPayload(b)];
-                    blocksToDelete.push(b.id);
-
-                    // Puxa os blocos filhos (a lista de tópicos e o checklist "Terminado?")
-                    while (lastBlockIndex + 1 < blocks.length) {
-                        const nextType = blocks[lastBlockIndex + 1].type;
-                        if (nextType === 'bulleted_list_item' || nextType === 'to_do') {
-                            lastBlockIndex++;
-                            const childBlock = blocks[lastBlockIndex];
-                            clusterPayloads.push(extractPayload(childBlock));
-                            blocksToDelete.push(childBlock.id);
-                        } else {
-                            break;
-                        }
-                    }
-
-                    allClusters.push({
-                        date: revDate,
-                        payloads: clusterPayloads.filter(p => p !== null)
-                    });
-                    
-                    i = lastBlockIndex;
-                }
-            }
-        }
-        return { allClusters, blocksToDelete };
-    }
-
-    /**
-     * Cria os novos blocos de revisão no formato visual de engenharia reversa do Notion
-     * (com cores de fundo, inline code, e checkbox).
-     */
-    static _buildNewReviews(allClusters, revisions, studyBatches) {
-        for (const rev of revisions) {
-            const dayStr = String(rev.date.getDate()).padStart(2, '0');
-            const monthStr = String(rev.date.getMonth() + 1).padStart(2, '0');
-            
-            for (const batch of studyBatches) {
-                const { materia, atividades } = batch;
-                const bulletBlocks = atividades.map((atv, idx) => {
-                    const richTextArray = [{ type: 'text', text: { content: `${atv}. ` } }];
-                    if (idx === 0) {
-                        richTextArray.push({ 
-                            type: 'text', 
-                            text: { content: 'Revisão' }, 
-                            annotations: { bold: true, italic: true, color: 'gray_background' } 
-                        });
-                    }
-                    return { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: richTextArray } };
-                });
-
-                const newPayloads = [
-                    {
-                        object: 'block',
-                        type: 'heading_3',
-                        heading_3: {
-                            rich_text: [
-                                { type: 'text', text: { content: `${materia} ` } },
-                                { type: 'text', text: { content: '[' }, annotations: { code: true, color: 'gray' } },
-                                { type: 'text', text: { content: 'autônomo' }, annotations: { code: true, color: 'yellow' } },
-                                { type: 'text', text: { content: ']' }, annotations: { code: true, color: 'gray' } },
-                                { type: 'text', text: { content: ' ' }, annotations: { color: 'gray' } },
-                                { type: 'text', text: { content: `(${dayStr}/${monthStr})` }, annotations: { italic: true, color: 'gray' } }
-                            ]
-                        }
-                    },
-                    ...bulletBlocks,
-                    {
-                        object: 'block',
-                        type: 'to_do',
-                        to_do: {
-                            rich_text: [
-                                { type: 'text', text: { content: 'Terminado! ' }, annotations: { italic: true, color: 'gray' } },
-                                { type: 'text', text: { content: '✔' }, annotations: { bold: true, italic: true, color: 'gray' } }
-                            ],
-                            checked: false
-                        }
-                    }
-                ];
-
-                allClusters.push({
-                    date: rev.date,
-                    payloads: newPayloads
-                });
-            }
-        }
-    }
-
 
     /**
      * Remove todos os blocos desordenados em pequenos lotes e, em seguida,
      * insere a lista completa perfeitamente cronológica no fim do documento.
      */
     static async _replaceBlocks(blocksToDelete, flatPayloads) {
-        // Deleta em chunks de 3 para não explodir o rate limit de ~3 req/s do Notion
         for (let i = 0; i < blocksToDelete.length; i += 3) {
             const chunk = blocksToDelete.slice(i, i + 3);
             await Promise.all(chunk.map(id => NotionApiService.deleteBlock(id)));
@@ -258,7 +226,6 @@ class ReviewService {
             }
         }
 
-        // Insere em chunks de 100 (limite nativo da API append do Notion)
         for (let i = 0; i < flatPayloads.length; i += 100) {
             const chunk = flatPayloads.slice(i, i + 100);
             await NotionApiService.appendBlocks(NOTION_TARGET_PAGE_ID, chunk);
