@@ -48,14 +48,14 @@ class ReviewService {
      * Entrypoint da automação de repetição espaçada (Spaced Repetition Review).
      * Coordena o fluxo de buscar, mesclar e re-escrever blocos de estudo em lote.
      * 
-     * @param {Object[]} studyBatches Array de objetos { materia, atividades }
-     * @param {string} dataFormalizacao Data base em formato YYYY-MM-DD
+     * @param {Object[]} studyBatches Array de objetos { subject, activities }
+     * @param {string} formalizationDate Data base em formato YYYY-MM-DD
      */
-    static async scheduleReviews(studyBatches, dataFormalizacao) {
+    static async scheduleReviews(studyBatches, formalizationDate) {
         try {
             console.log(`[ReviewService] Iniciando processamento em lote. Matérias recebidas: ${studyBatches.length}`);
             
-            const baseDate = new Date(`${dataFormalizacao}T12:00:00`);
+            const baseDate = new Date(`${formalizationDate}T12:00:00`);
             const revisions = [
                 { offset: 1, date: new Date(baseDate.getTime() + 1 * 24 * 60 * 60 * 1000) },
                 { offset: 7, date: new Date(baseDate.getTime() + 7 * 24 * 60 * 60 * 1000) },
@@ -79,7 +79,7 @@ class ReviewService {
                 for (const batch of studyBatches) {
                     allClusters.push({
                         date: rev.date,
-                        payloads: ReviewTask.buildNotionPayload(batch.materia, rev.date, batch.atividades)
+                        payloads: ReviewTask.buildNotionPayload(batch.subject, rev.date, batch.activities)
                     });
                 }
             }
@@ -126,9 +126,9 @@ class ReviewService {
                     const date = element.getScheduledDate();
                     if (date) {
                         reviews.push({
-                            materia: element.getSubject(),
+                            subject: element.getSubject(),
                             date: date,
-                            atividades: element.getActivities(),
+                            activities: element.getActivities(),
                             done: element.isCompleted()
                         });
                     }

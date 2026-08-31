@@ -1,19 +1,19 @@
 const Task = require('./Task');
 
 class ReviewTask extends Task {
-    #materia;
+    #subject;
     #date;
-    #atividades;
+    #activities;
     #done;
 
     constructor(titleBlocks, topicBlocks, checkBlocks) {
         super(titleBlocks[0], topicBlocks, checkBlocks);
         
         const titleText = titleBlocks[0].getPlainText();
-        this.#materia = this._parseMateria(titleText);
+        this.#subject = this._parseSubject(titleText);
         this.#date = this._parseReviewDate(titleText);
         
-        this.#atividades = topicBlocks.map(block => {
+        this.#activities = topicBlocks.map(block => {
             let text = block.getPlainText();
             return text.replace(/(?:\.\s*Revisão|\.|\s*Revisão)$/i, '').trim();
         });
@@ -21,7 +21,7 @@ class ReviewTask extends Task {
         this.#done = checkBlocks[0].getCheckedStatus();
     }
 
-    _parseMateria(fullText) {
+    _parseSubject(fullText) {
         return fullText.split('[')[0].trim();
     }
 
@@ -31,7 +31,7 @@ class ReviewTask extends Task {
 
         const day = parseInt(match[1], 10);
         const month = parseInt(match[2], 10);
-        const baseDate = new Date(); // Usado como base para virada de ano
+        const baseDate = new Date(); 
         
         let revYear = baseDate.getFullYear();
         const baseMonth = baseDate.getMonth();
@@ -42,19 +42,19 @@ class ReviewTask extends Task {
         return new Date(revYear, month - 1, day, 12, 0, 0);
     }
 
-    getSubject = () => this.#materia;
+    getSubject = () => this.#subject;
     getScheduledDate = () => this.#date;
-    getActivities = () => this.#atividades;
+    getActivities = () => this.#activities;
     isCompleted = () => this.#done;
 
     /**
      * Gera os payloads literais exigidos pelo Notion para desenhar a revisão na tela.
      */
-    static buildNotionPayload(materia, date, atividades) {
+    static buildNotionPayload(subject, date, activities) {
         const dayStr = String(date.getDate()).padStart(2, '0');
         const monthStr = String(date.getMonth() + 1).padStart(2, '0');
 
-        const bulletBlocks = atividades.map((atv, idx) => {
+        const bulletBlocks = activities.map((atv, idx) => {
             const richTextArray = [{ type: 'text', text: { content: `${atv}. ` } }];
             if (idx === 0) {
                 richTextArray.push({ 
@@ -72,7 +72,7 @@ class ReviewTask extends Task {
                 type: 'heading_3',
                 heading_3: {
                     rich_text: [
-                        { type: 'text', text: { content: `${materia} ` } },
+                        { type: 'text', text: { content: `${subject} ` } },
                         { type: 'text', text: { content: '[' }, annotations: { code: true, color: 'gray' } },
                         { type: 'text', text: { content: 'autônomo' }, annotations: { code: true, color: 'yellow' } },
                         { type: 'text', text: { content: ']' }, annotations: { code: true, color: 'gray' } },
