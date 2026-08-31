@@ -6,43 +6,6 @@ const Page = require('../domain/notion/Page');
 const ElementBuilder = require('../domain/notion/parsers/ElementBuilder');
 const ReviewTask = require('../domain/notion/elements/ReviewTask');
 
-function extractPayload(block) {
-    const type = block.type;
-    if (!block[type] || !block[type].rich_text) return null;
-    
-    // Simplificamos a extração mantendo apenas rich_text e checked
-    const payload = {
-        object: 'block',
-        type: type,
-        [type]: {
-            rich_text: block[type].rich_text.map(rt => {
-                const rtPayload = {
-                    type: 'text',
-                    text: { content: rt.text.content },
-                    annotations: rt.annotations
-                };
-                if (rt.text.link) {
-                    rtPayload.text.link = rt.text.link;
-                }
-                return rtPayload;
-            })
-        }
-    };
-    
-    if (type === 'to_do') {
-        payload[type].checked = block[type].checked;
-    }
-    if (type.startsWith('heading_')) {
-        payload[type].color = block[type].color;
-        payload[type].is_toggleable = block[type].is_toggleable;
-    }
-    if (type === 'bulleted_list_item') {
-        payload[type].color = block[type].color;
-    }
-    
-    return payload;
-}
-
 class ReviewService {
     /**
      * Entrypoint da automação de repetição espaçada (Spaced Repetition Review).
@@ -162,7 +125,7 @@ class ReviewService {
                     if (date) {
                         const clusterPayloads = element.getBlocks().map(b => {
                             blocksToDelete.push(b.getId());
-                            return extractPayload(b.getRawPayload());
+                            return b.toNotionPayload();
                         }).filter(p => p !== null);
 
                         allClusters.push({ date, payloads: clusterPayloads });
