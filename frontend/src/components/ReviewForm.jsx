@@ -68,9 +68,14 @@ export default function ReviewForm() {
     }
   };
 
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setProgress(0);
+    setProgressMessage('Iniciando conexão...');
     setMessage(null);
 
     if (!dataFormalizacao) {
@@ -92,21 +97,70 @@ export default function ReviewForm() {
 
     try {
       const token = localStorage.getItem('auth_token');
-      await axios.post(`${API_URL}/notion/reviews`, {
-        batches: cleanedBatches,
-        dataFormalizacao
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
       
-      setMessage({ type: 'success', text: `Revisões em lote agendadas com sucesso no Notion!` });
-      setBatches([{ materia: '', atividades: [''] }]);
+      const response = await fetch(`${API_URL}/notion/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          batches: cleanedBatches,
+          dataFormalizacao
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro na requisição: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop(); // Guarda pedaços incompletos no buffer
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.substring(6); // Remove 'data: '
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.error) {
+                throw new Error(data.error);
+              }
+              if (data.done) {
+                setMessage({ type: 'success', text: 'Revisões em lote agendadas com sucesso no Notion!' });
+                setBatches([{ materia: '', atividades: [''] }]);
+                break; // Finalizou com sucesso
+              }
+              if (data.progress !== undefined) {
+                setProgress(data.progress);
+                if (data.message) setProgressMessage(data.message);
+              }
+            } catch (e) {
+              if (e.message !== "Unexpected end of JSON input") {
+                 throw e;
+              }
+            }
+          }
+        }
+      }
     } catch (err) {
       console.error(err);
-      const errorDetail = err.response?.data?.error || err.message;
-      setMessage({ type: 'error', text: `Erro: ${errorDetail}` });
+      setMessage({ type: 'error', text: `Erro: ${err.message}` });
     } finally {
       setLoading(false);
+      setTimeout(() => {
+         setProgress(0);
+         setProgressMessage('');
+      }, 2000); // Mantém o 100% por um tempinho antes de limpar
     }
   };
 
@@ -247,11 +301,26 @@ export default function ReviewForm() {
           <Button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-[#2f2f2f] hover:bg-[#1a1a1a] text-white transition-all duration-300 hover:shadow-lg mt-6 h-11"
+            className="w-full bg-[#2f2f2f] hover:bg-[#1a1a1a] text-white transition-all duration-300 hover:shadow-lg mt-6 h-11 relative overflow-hidden"
           >
-            {loading ? 'Sincronizando com o Notion...' : 'Confirmar Agendamentos'}
-            {!loading && <Send size={16} className="ml-2" />}
+            <div 
+              className="absolute left-0 top-0 bottom-0 bg-white/20 transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+            <span className="relative flex items-center justify-center">
+              {loading ? (progressMessage || 'Sincronizando com o Notion...') : 'Confirmar Agendamentos'}
+              {!loading && <Send size={16} className="ml-2" />}
+            </span>
           </Button>
+
+          {loading && progress > 0 && (
+            <div className="mt-2 flex flex-col gap-1 px-1">
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div className="bg-[#2f2f2f] h-1.5 rounded-full transition-all duration-300 ease-out" style={{ width: `${progress}%` }}></div>
+              </div>
+              <p className="text-xs text-right text-gray-500 font-medium">{progress}%</p>
+            </div>
+          )}
 
           {message && (
             <div className={`p-3 rounded-md text-sm font-medium mt-4 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>

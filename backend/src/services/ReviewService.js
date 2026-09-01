@@ -47,9 +47,10 @@ class ReviewService {
      * @param {Object[]} studyBatches Array de objetos { materia, atividades }
      * @param {string} dataFormalizacao Data base em formato YYYY-MM-DD
      */
-    static async scheduleReviews(studyBatches, dataFormalizacao) {
+    static async scheduleReviews(studyBatches, dataFormalizacao, onProgress = () => {}) {
         try {
             console.log(`[ReviewService] Iniciando processamento em lote. Matérias recebidas: ${studyBatches.length}`);
+            onProgress("Iniciando processamento em lote...", 5);
             
             // 1. Calcular datas das revisões baseadas na data de formalização
             const baseDate = new Date(`${dataFormalizacao}T12:00:00`);
@@ -60,6 +61,7 @@ class ReviewService {
             ];
 
             // 2. Extrair toda a página do Notion
+            onProgress("Extraindo blocos da página do Notion...", 10);
             const res = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
             const blocks = res.results;
 
@@ -67,9 +69,11 @@ class ReviewService {
             const startIndex = await this._ensureTargetHeading(blocks);
 
             // 4. Coletar e parsear os blocos de revisão existentes para não perder os agendamentos antigos
+            onProgress("Identificando e extraindo revisões antigas...", 20);
             const { allClusters, blocksToDelete } = this._extractExistingReviews(blocks, startIndex, dataFormalizacao);
 
             // 5. Injetar as novas revisões em lote (batch) na nossa lista em memória
+            onProgress("Construindo novos blocos de revisão...", 30);
             this._buildNewReviews(allClusters, revisions, studyBatches);
 
             // 6. Ordenar estritamente de forma cronológica (a mais próxima no topo)
@@ -80,8 +84,9 @@ class ReviewService {
             allClusters.forEach(cluster => flatPayloads.push(...cluster.payloads));
 
             // 7. Aplicar as alterações destrutivas de deleção e reinserção
-            await this._replaceBlocks(blocksToDelete, flatPayloads);
+            await this._replaceBlocks(blocksToDelete, flatPayloads, onProgress);
 
+            onProgress("Finalizado com sucesso!", 100);
             return { success: true, message: "Revisões injetadas, organizadas e ordenadas cronologicamente com sucesso." };
         } catch (err) {
             console.error("Erro fatal no ReviewService:", err.message);
@@ -248,21 +253,33 @@ class ReviewService {
      * Remove todos os blocos desordenados em pequenos lotes e, em seguida,
      * insere a lista completa perfeitamente cronológica no fim do documento.
      */
-    static async _replaceBlocks(blocksToDelete, flatPayloads) {
+    static async _replaceBlocks(blocksToDelete, flatPayloads, onProgress = () => {}) {
         // Deleta em chunks de 3 para não explodir o rate limit de ~3 req/s do Notion
-        for (let i = 0; i < blocksToDelete.length; i += 3) {
+        const totalDeletes = blocksToDelete.length;
+        for (let i = 0; i < totalDeletes; i += 3) {
             const chunk = blocksToDelete.slice(i, i + 3);
             await Promise.all(chunk.map(id => NotionApiService.deleteBlock(id)));
-            if (i + 3 < blocksToDelete.length) {
+            
+            // Progress goes from 30% to 60% during deletion
+            const p = 30 + ((i + chunk.length) / (totalDeletes || 1)) * 30;
+            onProgress(`Removendo formatação antiga (${i + chunk.length}/${totalDeletes})...`, Math.round(p));
+
+            if (i + 3 < totalDeletes) {
                 await delay(1100);
             }
         }
 
         // Insere em chunks de 100 (limite nativo da API append do Notion)
-        for (let i = 0; i < flatPayloads.length; i += 100) {
+        const totalInserts = flatPayloads.length;
+        for (let i = 0; i < totalInserts; i += 100) {
             const chunk = flatPayloads.slice(i, i + 100);
             await NotionApiService.appendBlocks(NOTION_TARGET_PAGE_ID, chunk);
-            if (i + 100 < flatPayloads.length) {
+            
+            // Progress goes from 60% to 95% during insertion
+            const p = 60 + ((i + chunk.length) / (totalInserts || 1)) * 35;
+            onProgress(`Injetando revisões cronológicas (${i + chunk.length}/${totalInserts})...`, Math.round(p));
+
+            if (i + 100 < totalInserts) {
                 await delay(1100);
             }
         }
