@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import axios from 'axios';
 import { Calendar as CalendarIcon, BookOpen, Send, Plus, X, CalendarCheck2, Trash2 } from 'lucide-react';
+import { ReviewBatchItem } from './ReviewBatchItem';
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -28,45 +29,52 @@ export default function ReviewForm() {
     setFormalizationDate(localISOTime);
   };
 
-  const addBatch = () => {
-    setBatches([...batches, { subject: '', activities: [''] }]);
-  };
+  const addBatch = useCallback(() => {
+    setBatches(prev => [...prev, { subject: '', activities: [''] }]);
+  }, [setBatches]);
 
-  const removeBatch = (index) => {
-    if (batches.length === 1) {
-      setBatches([{ subject: '', activities: [''] }]);
-    } else {
-      const newBatches = [...batches];
+  const removeBatch = useCallback((index) => {
+    setBatches(prev => {
+      if (prev.length === 1) return [{ subject: '', activities: [''] }];
+      const newBatches = [...prev];
       newBatches.splice(index, 1);
-      setBatches(newBatches);
-    }
-  };
+      return newBatches;
+    });
+  }, [setBatches]);
 
-  const updateBatchSubject = (index, value) => {
-    const newBatches = [...batches];
-    newBatches[index].subject = value;
-    setBatches(newBatches);
-  };
+  const updateBatchSubject = useCallback((index, value) => {
+    setBatches(prev => {
+      const newBatches = [...prev];
+      newBatches[index].subject = value;
+      return newBatches;
+    });
+  }, [setBatches]);
 
-  const updateBatchActivity = (bIndex, aIndex, value) => {
-    const newBatches = [...batches];
-    newBatches[bIndex].activities[aIndex] = value;
-    setBatches(newBatches);
-  };
+  const updateBatchActivity = useCallback((bIndex, aIndex, value) => {
+    setBatches(prev => {
+      const newBatches = [...prev];
+      newBatches[bIndex].activities[aIndex] = value;
+      return newBatches;
+    });
+  }, [setBatches]);
 
-  const addActivityToBatch = (bIndex) => {
-    const newBatches = [...batches];
-    newBatches[bIndex].activities.push('');
-    setBatches(newBatches);
-  };
+  const addActivityToBatch = useCallback((bIndex) => {
+    setBatches(prev => {
+      const newBatches = [...prev];
+      newBatches[bIndex].activities.push('');
+      return newBatches;
+    });
+  }, [setBatches]);
 
-  const removeActivityFromBatch = (bIndex, aIndex) => {
-    const newBatches = [...batches];
-    if (newBatches[bIndex].activities.length > 1) {
-      newBatches[bIndex].activities.splice(aIndex, 1);
-      setBatches(newBatches);
-    }
-  };
+  const removeActivityFromBatch = useCallback((bIndex, aIndex) => {
+    setBatches(prev => {
+      const newBatches = [...prev];
+      if (newBatches[bIndex].activities.length > 1) {
+        newBatches[bIndex].activities.splice(aIndex, 1);
+      }
+      return newBatches;
+    });
+  }, [setBatches]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -166,72 +174,15 @@ export default function ReviewForm() {
 
           <div className="space-y-6">
             {batches.map((batch, bIndex) => (
-              <div key={bIndex} className="p-4 border border-notion-border rounded-lg bg-gray-50/50 relative group/batch">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeBatch(bIndex)}
-                  className="absolute top-2 right-2 text-gray-400 opacity-0 transition-opacity group-hover/batch:opacity-100 hover:text-red-500 hover:bg-red-50"
-                  title="Limpar / Remover Bloco"
-                >
-                  <Trash2 size={16} />
-                </Button>
-
-                <div className="space-y-2 mt-1">
-                  <Label className="flex items-center gap-2 text-notion-text font-medium">
-                    <BookOpen size={16} className="text-notion-muted" /> Matéria
-                  </Label>
-                  <Input 
-                    type="text"
-                    required
-                    value={batch.subject}
-                    onChange={e => updateBatchSubject(bIndex, e.target.value)}
-                    placeholder="Ex: Teoria dos Grafos e Computabilidade"
-                    className="border-notion-border focus-visible:ring-gray-300 pr-10 bg-white" 
-                  />
-                </div>
-
-                <div className="space-y-3 mt-4">
-                  <Label className="text-notion-text font-medium block">
-                    Atividades / Tópicos
-                  </Label>
-                  <div className="space-y-3">
-                    {batch.activities.map((atv, aIndex) => (
-                      <div key={aIndex} className="flex items-center gap-2">
-                        <Input 
-                          type="text"
-                          required
-                          value={atv}
-                          onChange={e => updateBatchActivity(bIndex, aIndex, e.target.value)}
-                          placeholder={`Tópico ${aIndex + 1}`}
-                          className="border-notion-border focus-visible:ring-gray-300 bg-white"
-                        />
-                        {batch.activities.length > 1 && (
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => removeActivityFromBatch(bIndex, aIndex)}
-                            className="text-gray-400 hover:text-red-500 hover:bg-red-50 shrink-0"
-                          >
-                            <X size={18} />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <Button 
-                    type="button" 
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => addActivityToBatch(bIndex)}
-                    className="mt-1 h-8 px-2 text-notion-muted hover:text-notion-text flex items-center gap-1"
-                  >
-                    <Plus size={16} /> Adicionar tópico
-                  </Button>
-                </div>
-              </div>
+              <ReviewBatchItem
+                key={bIndex}
+                batch={batch}
+                onUpdateSubject={(value) => updateBatchSubject(bIndex, value)}
+                onUpdateActivity={(aIndex, value) => updateBatchActivity(bIndex, aIndex, value)}
+                onAddActivity={() => addActivityToBatch(bIndex)}
+                onRemoveActivity={(aIndex) => removeActivityFromBatch(bIndex, aIndex)}
+                onRemoveBatch={() => removeBatch(bIndex)}
+              />
             ))}
           </div>
 
