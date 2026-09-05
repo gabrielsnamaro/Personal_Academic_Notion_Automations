@@ -84,15 +84,17 @@ export const ReviewBatchItem = React.memo(({
           </div>
 
           {selectValue === "Outro" && (
-            <Input 
-              type="text"
-              required
-              value={batch.subject}
-              onChange={e => onUpdateSubject(e.target.value)}
-              placeholder="Digite o nome da matéria"
-              className="flex-1 h-10 w-full border-notion-border focus-visible:ring-gray-300 bg-white" 
-              autoFocus
-            />
+            <div className="flex-1 w-full animate-in fade-in zoom-in-95 slide-in-from-left-4 duration-300 ease-out">
+              <Input 
+                type="text"
+                required
+                value={batch.subject}
+                onChange={e => onUpdateSubject(e.target.value)}
+                placeholder="Digite o nome da matéria"
+                className="h-10 w-full border-notion-border focus-visible:ring-gray-300 bg-white" 
+                autoFocus
+              />
+            </div>
           )}
         </div>
       </div>
