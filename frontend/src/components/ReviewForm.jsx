@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Calendar as CalendarIcon, BookOpen, Send, Plus, X, CalendarCheck2, Trash2 } from 'lucide-react';
 import { ReviewBatchItem } from './ReviewBatchItem';
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,10 +16,22 @@ import { cn } from "@/lib/utils";
 import { scheduleReviews } from '@/api/reviews.api';
 
 export default function ReviewForm() {
-  const [batches, setBatches] = useLocalStorage('reviewForm_batches', [{ subject: '', activities: [''] }]);
-  const [formalizationDate, setFormalizationDate] = useLocalStorage('reviewForm_data', '');
+  const [batches, setBatches] = useLocalStorage('reviewForm_batches', [
+    { id: crypto.randomUUID(), subject: '', activities: [''] }
+  ]);
+  const [formalizationDate, setFormalizationDate] = useLocalStorage('reviewForm_date', '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+  
+  const [parent] = useAutoAnimate();
+
+  // Garante que blocos antigos do localStorage ganhem um ID unico para a animacao funcionar
+  useEffect(() => {
+    const hasMissingIds = batches.some(b => !b.id);
+    if (hasMissingIds) {
+      setBatches(prev => prev.map(b => b.id ? b : { ...b, id: crypto.randomUUID() }));
+    }
+  }, [batches, setBatches]);
 
   const handleSetToday = () => {
     const today = new Date();
@@ -28,7 +41,7 @@ export default function ReviewForm() {
   };
 
   const addBatch = useCallback(() => {
-    setBatches(prev => [...prev, { subject: '', activities: [''] }]);
+    setBatches(prev => [...prev, { id: crypto.randomUUID(), subject: '', activities: [''] }]);
   }, [setBatches]);
 
   const removeBatch = useCallback((bIndex) => {
@@ -39,6 +52,7 @@ export default function ReviewForm() {
     setBatches(prev => {
       const newBatches = [...prev];
       const clone = JSON.parse(JSON.stringify(newBatches[bIndex]));
+      clone.id = crypto.randomUUID(); // Must have a fresh unique ID
       newBatches.splice(bIndex + 1, 0, clone);
       return newBatches;
     });
@@ -186,23 +200,28 @@ export default function ReviewForm() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            {batches.map((batch, bIndex) => (
-              <ReviewBatchItem
-                key={bIndex}
-                batch={batch}
-                onUpdateSubject={(value) => updateBatchSubject(bIndex, value)}
-                onUpdateActivity={(aIndex, value) => updateBatchActivity(bIndex, aIndex, value)}
-                onAddActivity={() => addActivityToBatch(bIndex)}
-                onRemoveActivity={(aIndex) => removeActivityFromBatch(bIndex, aIndex)}
-                onRemoveBatch={() => removeBatch(bIndex)}
-                onDuplicateBatch={() => duplicateBatch(bIndex)}
-                onMoveUp={() => moveBatchUp(bIndex)}
-                onMoveDown={() => moveBatchDown(bIndex)}
-                canMoveUp={bIndex > 0}
-                canMoveDown={bIndex < batches.length - 1}
-              />
-            ))}
+          <div className="space-y-6" ref={parent}>
+            {batches.map((batch, bIndex) => {
+              // Ensure legacy batches without an ID get a stable one (fallback)
+              const batchKey = batch.id || `legacy-${bIndex}`;
+              
+              return (
+                <ReviewBatchItem
+                  key={batchKey}
+                  batch={batch}
+                  onUpdateSubject={(value) => updateBatchSubject(bIndex, value)}
+                  onUpdateActivity={(aIndex, value) => updateBatchActivity(bIndex, aIndex, value)}
+                  onAddActivity={() => addActivityToBatch(bIndex)}
+                  onRemoveActivity={(aIndex) => removeActivityFromBatch(bIndex, aIndex)}
+                  onRemoveBatch={() => removeBatch(bIndex)}
+                  onDuplicateBatch={() => duplicateBatch(bIndex)}
+                  onMoveUp={() => moveBatchUp(bIndex)}
+                  onMoveDown={() => moveBatchDown(bIndex)}
+                  canMoveUp={bIndex > 0}
+                  canMoveDown={bIndex < batches.length - 1}
+                />
+              );
+            })}
           </div>
 
           <Button
