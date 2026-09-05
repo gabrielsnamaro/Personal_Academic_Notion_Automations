@@ -3,6 +3,7 @@ import { BookOpen, Plus, X, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const PRESET_SUBJECTS = [
   "Teoria dos Grafos e Computabilidade",
@@ -35,8 +36,7 @@ export const ReviewBatchItem = React.memo(({
     }
   }, [batch.subject]); // selectValue removed from deps to avoid loops, it's safe here
 
-  const handleSelectChange = (e) => {
-    const val = e.target.value;
+  const handleSelectChange = (val) => {
     setSelectValue(val);
     
     if (val === "Outro") {
@@ -65,17 +65,23 @@ export const ReviewBatchItem = React.memo(({
         </Label>
         
         <div className="flex gap-2 flex-col sm:flex-row items-center w-full">
-          <select
-            required
-            value={selectValue}
-            onChange={handleSelectChange}
-            className="flex-1 h-10 w-full rounded-md border bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 border-notion-border"
-          >
-            <option value="" disabled>Selecione uma matéria...</option>
-            {PRESET_SUBJECTS.map((subject) => (
-              <option key={subject} value={subject}>{subject}</option>
-            ))}
-          </select>
+          <div className="flex-1 w-full">
+            <Select
+              value={selectValue}
+              onValueChange={handleSelectChange}
+            >
+              <SelectTrigger className="bg-white border-notion-border focus-visible:ring-gray-300">
+                <SelectValue placeholder="Selecione uma matéria..." />
+              </SelectTrigger>
+              <SelectContent>
+                {PRESET_SUBJECTS.map((subject) => (
+                  <SelectItem key={subject} value={subject}>
+                    {subject}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {selectValue === "Outro" && (
             <Input 
