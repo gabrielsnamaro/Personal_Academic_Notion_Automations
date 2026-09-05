@@ -1,4 +1,4 @@
-﻿const { OAuth2Client } = require('google-auth-library');
+const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const { GOOGLE_OAUTH_CLIENT_ID, AUTHORIZED_EMAIL, JWT_SECRET } = require('../config');
 
@@ -43,11 +43,11 @@ class AuthController {
                 return res.status(403).json({ error: `Acesso Negado: O e-mail ${email} não está autorizado.` });
             }
 
-            // Gera o JWT local (validade de 24h)
+            // Gera o JWT local (validade de 30 dias)
             const token = jwt.sign(
                 { email: payload.email, name: payload.name, picture: payload.picture },
                 JWT_SECRET,
-                { expiresIn: '24h' }
+                { expiresIn: '30d' }
             );
 
             return res.json({
@@ -64,6 +64,14 @@ class AuthController {
             console.error("Erro na autenticação:", error);
             return res.status(500).json({ error: "Erro interno no servidor de autenticação." });
         }
+    }
+
+    static verifySession = async (req, res) => {
+        // Se chegou até aqui, o authMiddleware já validou o token e anexou req.user
+        return res.json({
+            valid: true,
+            user: req.user
+        });
     }
 }
 

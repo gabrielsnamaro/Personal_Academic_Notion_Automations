@@ -11,3 +11,11 @@ export async function loginWithGoogle(accessToken) {
     access_token: accessToken,
   });
 }
+
+/**
+ * Verifica se a sessão atual do JWT ainda é válida.
+ * @returns {Promise<Object>} Dados do usuário se válido.
+ */
+export async function verifySession() {
+  return await apiClient.get('/auth/verify');
+}
