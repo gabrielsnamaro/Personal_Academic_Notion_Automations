@@ -1,8 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, Plus, X, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+const PRESET_SUBJECTS = [
+  "Teoria dos Grafos e Computabilidade",
+  "Redes de Computadores",
+  "Projeto de Software",
+  "Interação Humano Computador",
+  "Outro"
+];
 
 export const ReviewBatchItem = React.memo(({
   batch,
@@ -12,6 +20,30 @@ export const ReviewBatchItem = React.memo(({
   onRemoveActivity,
   onRemoveBatch
 }) => {
+  // Check if current subject is a preset (or empty). If it's a custom string, set select to "Outro".
+  const isPreset = PRESET_SUBJECTS.includes(batch.subject) || !batch.subject;
+  const initialSelectValue = isPreset ? (batch.subject || "") : "Outro";
+  
+  const [selectValue, setSelectValue] = useState(initialSelectValue);
+
+  // Sync state if batch.subject changes from outside (e.g. form reset)
+  useEffect(() => {
+    if (!batch.subject) {
+      setSelectValue("");
+    }
+  }, [batch.subject]);
+
+  const handleSelectChange = (e) => {
+    const val = e.target.value;
+    setSelectValue(val);
+    
+    if (val === "Outro") {
+      onUpdateSubject(""); // Clear for the custom input
+    } else {
+      onUpdateSubject(val);
+    }
+  };
+
   return (
     <div className="p-4 border border-notion-border rounded-lg bg-gray-50/50 relative group/batch">
       <Button
@@ -29,14 +61,32 @@ export const ReviewBatchItem = React.memo(({
         <Label className="flex items-center gap-2 text-notion-text font-medium">
           <BookOpen size={16} className="text-notion-muted" /> Matéria
         </Label>
-        <Input 
-          type="text"
-          required
-          value={batch.subject}
-          onChange={e => onUpdateSubject(e.target.value)}
-          placeholder="Ex: Teoria dos Grafos e Computabilidade"
-          className="border-notion-border focus-visible:ring-gray-300 pr-10 bg-white" 
-        />
+        
+        <div className="flex gap-2 flex-col sm:flex-row">
+          <select
+            required
+            value={selectValue}
+            onChange={handleSelectChange}
+            className="flex h-10 w-full sm:w-1/2 rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border-notion-border focus-visible:ring-gray-300"
+          >
+            <option value="" disabled>Selecione uma matéria...</option>
+            {PRESET_SUBJECTS.map((subject) => (
+              <option key={subject} value={subject}>{subject}</option>
+            ))}
+          </select>
+
+          {selectValue === "Outro" && (
+            <Input 
+              type="text"
+              required
+              value={batch.subject}
+              onChange={e => onUpdateSubject(e.target.value)}
+              placeholder="Digite o nome da matéria"
+              className="border-notion-border focus-visible:ring-gray-300 bg-white sm:w-1/2" 
+              autoFocus
+            />
+          )}
+        </div>
       </div>
 
       <div className="space-y-3 mt-4">
