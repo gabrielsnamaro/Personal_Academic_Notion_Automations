@@ -1,10 +1,8 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
-import axios from 'axios';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { loginWithGoogle } from '@/api/auth.api';
 
 function GoogleIcon(props) {
   return (
@@ -36,14 +34,13 @@ function Login({ onLoginSuccess }) {
     onSuccess: async (tokenResponse) => {
       setLoading(true);
       try {
-        const res = await axios.post(`${API_URL}/auth/google`, {
-          access_token: tokenResponse.access_token,
-        });
-        localStorage.setItem('auth_token', res.data.token);
-        onLoginSuccess(res.data.user);
+        const payload = await loginWithGoogle(tokenResponse.access_token);
+        
+        localStorage.setItem('auth_token', payload.token);
+        onLoginSuccess(payload.user);
       } catch (error) {
         console.error("Falha no login", error);
-        alert(error.response?.data?.error || "Acesso Negado.");
+        alert(error.response?.data?.error || error.response?.data?.message || "Acesso Negado.");
       } finally {
         setLoading(false);
       }

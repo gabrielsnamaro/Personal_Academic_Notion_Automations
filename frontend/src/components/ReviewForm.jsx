@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import axios from 'axios';
 import { Calendar as CalendarIcon, BookOpen, Send, Plus, X, CalendarCheck2, Trash2 } from 'lucide-react';
 import { ReviewBatchItem } from './ReviewBatchItem';
 import { format, parseISO } from "date-fns";
@@ -13,8 +12,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { scheduleReviews } from '@/api/reviews.api';
 
 export default function ReviewForm() {
   const [batches, setBatches] = useLocalStorage('reviewForm_batches', [{ subject: '', activities: [''] }]);
@@ -99,13 +97,7 @@ export default function ReviewForm() {
     }
 
     try {
-      const token = localStorage.getItem('auth_token');
-      await axios.post(`${API_URL}/notion/reviews`, {
-        batches: cleanedBatches,
-        formalizationDate
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await scheduleReviews(cleanedBatches, formalizationDate);
       
       setMessage({ type: 'success', text: `Revisões em lote agendadas com sucesso no Notion!` });
       setBatches([{ subject: '', activities: [''] }]);
