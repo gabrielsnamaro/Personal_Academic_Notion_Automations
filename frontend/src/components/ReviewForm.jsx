@@ -200,7 +200,7 @@ export default function ReviewForm() {
             </div>
           </div>
 
-          <div className="space-y-6" ref={parent}>
+          <div className="flex flex-col gap-6" ref={parent}>
             {batches.map((batch, bIndex) => {
               // Ensure legacy batches without an ID get a stable one (fallback)
               const batchKey = batch.id || `legacy-${bIndex}`;
