@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Plus, X, Trash2, Copy } from 'lucide-react';
+import { BookOpen, Plus, X, Trash2, Copy, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,11 @@ export const ReviewBatchItem = React.memo(({
   onAddActivity,
   onRemoveActivity,
   onRemoveBatch,
-  onDuplicateBatch
+  onDuplicateBatch,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown
 }) => {
   // Check if current subject is a preset (or empty). If it's a custom string, set select to "Outro".
   const isPreset = PRESET_SUBJECTS.includes(batch.subject) || !batch.subject;
@@ -50,6 +54,28 @@ export const ReviewBatchItem = React.memo(({
   return (
     <div className="p-4 border border-notion-border rounded-lg bg-gray-50/50 relative group/batch">
       <div className="absolute top-2 right-2 flex gap-1 opacity-100 md:opacity-0 transition-opacity duration-200 group-hover/batch:opacity-100">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onMoveUp}
+          disabled={!canMoveUp}
+          className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 h-8 w-8 disabled:opacity-30 disabled:hover:bg-transparent"
+          title="Mover para cima"
+        >
+          <ArrowUp size={16} />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onMoveDown}
+          disabled={!canMoveDown}
+          className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 h-8 w-8 disabled:opacity-30 disabled:hover:bg-transparent"
+          title="Mover para baixo"
+        >
+          <ArrowDown size={16} />
+        </Button>
         <Button
           type="button"
           variant="ghost"

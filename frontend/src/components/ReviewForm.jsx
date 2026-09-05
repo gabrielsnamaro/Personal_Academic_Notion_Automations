@@ -44,6 +44,24 @@ export default function ReviewForm() {
     });
   }, [setBatches]);
 
+  const moveBatchUp = useCallback((bIndex) => {
+    if (bIndex === 0) return;
+    setBatches(prev => {
+      const newBatches = [...prev];
+      [newBatches[bIndex - 1], newBatches[bIndex]] = [newBatches[bIndex], newBatches[bIndex - 1]];
+      return newBatches;
+    });
+  }, [setBatches]);
+
+  const moveBatchDown = useCallback((bIndex) => {
+    setBatches(prev => {
+      if (bIndex === prev.length - 1) return prev;
+      const newBatches = [...prev];
+      [newBatches[bIndex + 1], newBatches[bIndex]] = [newBatches[bIndex], newBatches[bIndex + 1]];
+      return newBatches;
+    });
+  }, [setBatches]);
+
   const updateBatchSubject = useCallback((bIndex, value) => {
     setBatches(prev => {
       const newBatches = [...prev];
@@ -179,6 +197,10 @@ export default function ReviewForm() {
                 onRemoveActivity={(aIndex) => removeActivityFromBatch(bIndex, aIndex)}
                 onRemoveBatch={() => removeBatch(bIndex)}
                 onDuplicateBatch={() => duplicateBatch(bIndex)}
+                onMoveUp={() => moveBatchUp(bIndex)}
+                onMoveDown={() => moveBatchDown(bIndex)}
+                canMoveUp={bIndex > 0}
+                canMoveDown={bIndex < batches.length - 1}
               />
             ))}
           </div>
