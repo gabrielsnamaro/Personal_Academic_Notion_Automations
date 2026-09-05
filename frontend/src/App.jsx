@@ -20,9 +20,16 @@ function App() {
         await verifySession();
         setIsAuthenticated(true);
       } catch (error) {
-        console.warn("Sessão inválida ou expirada, deslogando usuário.", error);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
+        console.warn("Falha ao verificar sessão:", error);
+        // Só desloga se o token for invalidado pelo backend (401/403)
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          console.warn("Token inválido ou expirado, deslogando usuário.");
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+        } else {
+          // Se for erro de rede ou 404 (backend desatualizado), mantém a sessão otimisticamente
+          setIsAuthenticated(true);
+        }
       } finally {
         setIsChecking(false);
       }
