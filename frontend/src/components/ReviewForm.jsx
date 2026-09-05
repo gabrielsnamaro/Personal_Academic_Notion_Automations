@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Calendar as CalendarIcon, BookOpen, Send, Plus, X, CalendarCheck2, Trash2 } from 'lucide-react';
 import { ReviewBatchItem } from './ReviewBatchItem';
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useAutoAnimate } from '@formkit/auto-animate/react';
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { scheduleReviews } from '@/api/reviews.api';
 
+// Native browser view transitions helper
+const withViewTransition = (callback) => {
+  if (document.startViewTransition) {
+    document.startViewTransition(() => {
+      flushSync(() => {
+        callback();
+      });
+    });
+  } else {
+    callback();
+  }
+};
+
 export default function ReviewForm() {
   const [batches, setBatches] = useLocalStorage('reviewForm_batches', [
     { id: crypto.randomUUID(), subject: '', activities: [''] }
@@ -22,8 +35,6 @@ export default function ReviewForm() {
   const [formalizationDate, setFormalizationDate] = useLocalStorage('reviewForm_date', '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
-  
-  const [parent] = useAutoAnimate();
 
   // Garante que blocos antigos do localStorage ganhem um ID unico para a animacao funcionar
   useEffect(() => {
@@ -41,38 +52,48 @@ export default function ReviewForm() {
   };
 
   const addBatch = useCallback(() => {
-    setBatches(prev => [...prev, { id: crypto.randomUUID(), subject: '', activities: [''] }]);
+    withViewTransition(() => {
+      setBatches(prev => [...prev, { id: crypto.randomUUID(), subject: '', activities: [''] }]);
+    });
   }, [setBatches]);
 
   const removeBatch = useCallback((bIndex) => {
-    setBatches(prev => prev.filter((_, i) => i !== bIndex));
+    withViewTransition(() => {
+      setBatches(prev => prev.filter((_, i) => i !== bIndex));
+    });
   }, [setBatches]);
 
   const duplicateBatch = useCallback((bIndex) => {
-    setBatches(prev => {
-      const newBatches = [...prev];
-      const clone = JSON.parse(JSON.stringify(newBatches[bIndex]));
-      clone.id = crypto.randomUUID(); // Must have a fresh unique ID
-      newBatches.splice(bIndex + 1, 0, clone);
-      return newBatches;
+    withViewTransition(() => {
+      setBatches(prev => {
+        const newBatches = [...prev];
+        const clone = JSON.parse(JSON.stringify(newBatches[bIndex]));
+        clone.id = crypto.randomUUID(); // Must have a fresh unique ID
+        newBatches.splice(bIndex + 1, 0, clone);
+        return newBatches;
+      });
     });
   }, [setBatches]);
 
   const moveBatchUp = useCallback((bIndex) => {
     if (bIndex === 0) return;
-    setBatches(prev => {
-      const newBatches = [...prev];
-      [newBatches[bIndex - 1], newBatches[bIndex]] = [newBatches[bIndex], newBatches[bIndex - 1]];
-      return newBatches;
+    withViewTransition(() => {
+      setBatches(prev => {
+        const newBatches = [...prev];
+        [newBatches[bIndex - 1], newBatches[bIndex]] = [newBatches[bIndex], newBatches[bIndex - 1]];
+        return newBatches;
+      });
     });
   }, [setBatches]);
 
   const moveBatchDown = useCallback((bIndex) => {
-    setBatches(prev => {
-      if (bIndex === prev.length - 1) return prev;
-      const newBatches = [...prev];
-      [newBatches[bIndex + 1], newBatches[bIndex]] = [newBatches[bIndex], newBatches[bIndex + 1]];
-      return newBatches;
+    withViewTransition(() => {
+      setBatches(prev => {
+        if (bIndex === prev.length - 1) return prev;
+        const newBatches = [...prev];
+        [newBatches[bIndex + 1], newBatches[bIndex]] = [newBatches[bIndex], newBatches[bIndex + 1]];
+        return newBatches;
+      });
     });
   }, [setBatches]);
 
@@ -200,7 +221,7 @@ export default function ReviewForm() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-6" ref={parent}>
+          <div className="flex flex-col gap-6">
             {batches.map((batch, bIndex) => {
               // Ensure legacy batches without an ID get a stable one (fallback)
               const batchKey = batch.id || `legacy-${bIndex}`;
@@ -219,6 +240,7 @@ export default function ReviewForm() {
                   onMoveDown={() => moveBatchDown(bIndex)}
                   canMoveUp={bIndex > 0}
                   canMoveDown={bIndex < batches.length - 1}
+                  style={{ viewTransitionName: `batch-${batchKey}` }}
                 />
               );
             })}

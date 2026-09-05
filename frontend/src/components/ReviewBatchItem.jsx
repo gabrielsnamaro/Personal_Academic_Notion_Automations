@@ -24,7 +24,8 @@ export const ReviewBatchItem = React.memo(({
   onMoveUp,
   onMoveDown,
   canMoveUp,
-  canMoveDown
+  canMoveDown,
+  style
 }) => {
   // Check if current subject is a preset (or empty). If it's a custom string, set select to "Outro".
   const isPreset = PRESET_SUBJECTS.includes(batch.subject) || !batch.subject;
@@ -52,7 +53,7 @@ export const ReviewBatchItem = React.memo(({
   };
 
   return (
-    <div className="p-4 border border-notion-border rounded-lg bg-gray-50/50 relative group/batch">
+    <div style={style} className="p-4 border border-notion-border rounded-lg bg-gray-50/50 relative group/batch">
       <div className="absolute top-2 right-2 flex gap-1 opacity-100 md:opacity-0 transition-opacity duration-200 group-hover/batch:opacity-100">
         <Button
           type="button"
