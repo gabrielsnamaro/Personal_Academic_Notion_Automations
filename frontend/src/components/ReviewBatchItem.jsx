@@ -28,10 +28,12 @@ export const ReviewBatchItem = React.memo(({
 
   // Sync state if batch.subject changes from outside (e.g. form reset)
   useEffect(() => {
-    if (!batch.subject) {
+    if (!batch.subject && selectValue !== "Outro") {
       setSelectValue("");
+    } else if (batch.subject && PRESET_SUBJECTS.includes(batch.subject)) {
+      setSelectValue(batch.subject);
     }
-  }, [batch.subject]);
+  }, [batch.subject]); // selectValue removed from deps to avoid loops, it's safe here
 
   const handleSelectChange = (e) => {
     const val = e.target.value;
@@ -62,12 +64,12 @@ export const ReviewBatchItem = React.memo(({
           <BookOpen size={16} className="text-notion-muted" /> Matéria
         </Label>
         
-        <div className="flex gap-2 flex-col sm:flex-row">
+        <div className="flex gap-2 flex-col sm:flex-row items-center w-full">
           <select
             required
             value={selectValue}
             onChange={handleSelectChange}
-            className="flex h-10 w-full sm:w-1/2 rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border-notion-border focus-visible:ring-gray-300"
+            className="flex-1 h-10 w-full rounded-md border bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 border-notion-border"
           >
             <option value="" disabled>Selecione uma matéria...</option>
             {PRESET_SUBJECTS.map((subject) => (
@@ -82,7 +84,7 @@ export const ReviewBatchItem = React.memo(({
               value={batch.subject}
               onChange={e => onUpdateSubject(e.target.value)}
               placeholder="Digite o nome da matéria"
-              className="border-notion-border focus-visible:ring-gray-300 bg-white sm:w-1/2" 
+              className="flex-1 h-10 w-full border-notion-border focus-visible:ring-gray-300 bg-white" 
               autoFocus
             />
           )}
