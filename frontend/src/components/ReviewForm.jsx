@@ -31,19 +31,23 @@ export default function ReviewForm() {
     setBatches(prev => [...prev, { subject: '', activities: [''] }]);
   }, [setBatches]);
 
-  const removeBatch = useCallback((index) => {
+  const removeBatch = useCallback((bIndex) => {
+    setBatches(prev => prev.filter((_, i) => i !== bIndex));
+  }, [setBatches]);
+
+  const duplicateBatch = useCallback((bIndex) => {
     setBatches(prev => {
-      if (prev.length === 1) return [{ subject: '', activities: [''] }];
       const newBatches = [...prev];
-      newBatches.splice(index, 1);
+      const clone = JSON.parse(JSON.stringify(newBatches[bIndex]));
+      newBatches.splice(bIndex + 1, 0, clone);
       return newBatches;
     });
   }, [setBatches]);
 
-  const updateBatchSubject = useCallback((index, value) => {
+  const updateBatchSubject = useCallback((bIndex, value) => {
     setBatches(prev => {
       const newBatches = [...prev];
-      newBatches[index].subject = value;
+      newBatches[bIndex].subject = value;
       return newBatches;
     });
   }, [setBatches]);
@@ -174,6 +178,7 @@ export default function ReviewForm() {
                 onAddActivity={() => addActivityToBatch(bIndex)}
                 onRemoveActivity={(aIndex) => removeActivityFromBatch(bIndex, aIndex)}
                 onRemoveBatch={() => removeBatch(bIndex)}
+                onDuplicateBatch={() => duplicateBatch(bIndex)}
               />
             ))}
           </div>

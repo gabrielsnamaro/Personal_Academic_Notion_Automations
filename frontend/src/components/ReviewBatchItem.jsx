@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Plus, X, Trash2 } from 'lucide-react';
+import { BookOpen, Plus, X, Trash2, Copy } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +19,8 @@ export const ReviewBatchItem = React.memo(({
   onUpdateActivity,
   onAddActivity,
   onRemoveActivity,
-  onRemoveBatch
+  onRemoveBatch,
+  onDuplicateBatch
 }) => {
   // Check if current subject is a preset (or empty). If it's a custom string, set select to "Outro".
   const isPreset = PRESET_SUBJECTS.includes(batch.subject) || !batch.subject;
@@ -48,16 +49,28 @@ export const ReviewBatchItem = React.memo(({
 
   return (
     <div className="p-4 border border-notion-border rounded-lg bg-gray-50/50 relative group/batch">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={onRemoveBatch}
-        className="absolute top-2 right-2 text-gray-400 opacity-0 transition-opacity group-hover/batch:opacity-100 hover:text-red-500 hover:bg-red-50"
-        title="Limpar / Remover Bloco"
-      >
-        <Trash2 size={16} />
-      </Button>
+      <div className="absolute top-2 right-2 flex gap-1 opacity-100 md:opacity-0 transition-opacity duration-200 group-hover/batch:opacity-100">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onDuplicateBatch}
+          className="text-gray-400 hover:text-blue-500 hover:bg-blue-50 h-8 w-8"
+          title="Duplicar Bloco"
+        >
+          <Copy size={16} />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onRemoveBatch}
+          className="text-gray-400 hover:text-red-500 hover:bg-red-50 h-8 w-8"
+          title="Remover Bloco"
+        >
+          <Trash2 size={16} />
+        </Button>
+      </div>
 
       <div className="space-y-2 mt-1">
         <Label className="flex items-center gap-2 text-notion-text font-medium">
