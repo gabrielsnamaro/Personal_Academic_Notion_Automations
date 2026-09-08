@@ -20,3 +20,4 @@ export async function scheduleReviews(batches, formalizationDate) {
 export async function getScheduledReviews() {
   return await apiClient.get('/notion/reviews');
 }
+
