@@ -17,7 +17,7 @@ review_section:
       rich_text: []
       icon:
         type: "emoji"
-        emoji: "💡"
+        emoji: "🧠"
       color: "default_background"
     header_block:
       object: "block"
@@ -29,3 +29,4 @@ review_section:
               content: "Revisões marcadas"
         color: "orange_background"
         is_toggleable: false
+
