@@ -10,7 +10,8 @@ import {
   Layers,
   Search,
   X,
-  Trash2
+  Trash2,
+  ArrowUpDown
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -65,6 +66,7 @@ export default function ReviewCyclesPanel({ onSwitchToSchedule }) {
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [sortBy, setSortBy] = useState('next-asc');
 
   // Controle do modal de invalidação e feedback
   const [cycleToInvalidate, setCycleToInvalidate] = useState(null);
@@ -181,8 +183,36 @@ export default function ReviewCyclesPanel({ onSwitchToSchedule }) {
       }
 
       return true;
+    }).sort((a, b) => {
+      if (sortBy === 'next-asc') {
+        const dateA = a.nextPendingReview || '9999-99-99';
+        const dateB = b.nextPendingReview || '9999-99-99';
+        return dateA.localeCompare(dateB);
+      }
+      if (sortBy === 'next-desc') {
+        const dateA = a.nextPendingReview || '0000-00-00';
+        const dateB = b.nextPendingReview || '0000-00-00';
+        return dateB.localeCompare(dateA);
+      }
+      if (sortBy === 'formalization-desc') {
+        const dateA = a.inferredBaseDate || '0000-00-00';
+        const dateB = b.inferredBaseDate || '0000-00-00';
+        return dateB.localeCompare(dateA);
+      }
+      if (sortBy === 'formalization-asc') {
+        const dateA = a.inferredBaseDate || '9999-99-99';
+        const dateB = b.inferredBaseDate || '9999-99-99';
+        return dateA.localeCompare(dateB);
+      }
+      if (sortBy === 'subject-asc') {
+        return a.subject.localeCompare(b.subject, 'pt-BR');
+      }
+      if (sortBy === 'subject-desc') {
+        return b.subject.localeCompare(a.subject, 'pt-BR');
+      }
+      return 0;
     });
-  }, [processedCycles, activeFilter, selectedSubject, searchTerm, startDate, endDate]);
+  }, [processedCycles, activeFilter, selectedSubject, searchTerm, startDate, endDate, sortBy]);
 
   const totalOverdueCount = useMemo(() => {
     return processedCycles.filter(c => c.hasOverdue).length;
@@ -193,7 +223,8 @@ export default function ReviewCyclesPanel({ onSwitchToSchedule }) {
     selectedSubject !== 'all' || 
     startDate ||
     endDate ||
-    activeFilter !== 'all'
+    activeFilter !== 'all' ||
+    sortBy !== 'next-asc'
   );
 
   const handleResetFilters = () => {
@@ -202,6 +233,7 @@ export default function ReviewCyclesPanel({ onSwitchToSchedule }) {
     setStartDate('');
     setEndDate('');
     setActiveFilter('all');
+    setSortBy('next-asc');
   };
 
   const getStageBadge = (stage) => {
@@ -416,8 +448,28 @@ export default function ReviewCyclesPanel({ onSwitchToSchedule }) {
         {/* Grupo de Filtros no Canto da Barra */}
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           
+          {/* Ordenação dos Ciclos (Select shadcn) */}
+          <div className="w-full sm:w-44 shrink-0">
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="h-9 text-xs bg-white border-notion-border text-notion-text font-normal">
+                <div className="flex items-center gap-1.5 truncate">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                  <SelectValue placeholder="Ordenar por" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="text-xs">
+                <SelectItem value="next-asc">Próx. mais recente</SelectItem>
+                <SelectItem value="next-desc">Próx. mais distante</SelectItem>
+                <SelectItem value="formalization-desc">Formalização (recente)</SelectItem>
+                <SelectItem value="formalization-asc">Formalização (antiga)</SelectItem>
+                <SelectItem value="subject-asc">Matéria (A - Z)</SelectItem>
+                <SelectItem value="subject-desc">Matéria (Z - A)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Filtro de Matéria (Select shadcn) */}
-          <div className="w-full sm:w-48 shrink-0">
+          <div className="w-full sm:w-44 shrink-0">
             <Select value={selectedSubject} onValueChange={setSelectedSubject}>
               <SelectTrigger className="h-9 text-xs bg-white border-notion-border text-notion-text font-normal">
                 <SelectValue placeholder="Todas as matérias" />
