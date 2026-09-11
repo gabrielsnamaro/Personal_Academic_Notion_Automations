@@ -5,12 +5,14 @@ const Block = require('../domain/notion/Block');
 const Page = require('../domain/notion/Page');
 const ElementBuilder = require('../domain/notion/parsers/ElementBuilder');
 const ReviewTask = require('../domain/notion/ReviewTask');
+const PageLayoutParser = require('../domain/notion/parsers/PageLayoutParser');
 
 class ReviewService {
     /**
      * Entrypoint da automação de repetição espaçada (Spaced Repetition Review).
      * Coordena o fluxo de buscar, mesclar e re-escrever blocos de estudo em lote
-     * utilizando a estratégia de substituição atômica de container (Atomic Container Replacement).
+     * utilizando a estratégia de substituição atômica de container (Atomic Container Replacement)
+     * e orientação declarativa por schema YAML (PageLayoutTemplate.yaml).
      * 
      * @param {Object[]} studyBatches Array de objetos { subject, activities }
      * @param {string} formalizationDate Data base em formato YYYY-MM-DD
@@ -29,13 +31,21 @@ class ReviewService {
                 { offset: 30, date: new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000) }
             ];
 
+            const layoutParser = new PageLayoutParser();
+
             console.log(`[ReviewService] 🔍 [Passo 1/4] Buscando blocos raiz da página no Notion...`);
             const pageRes = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
             const rawPageBlocks = pageRes.results;
             console.log(`[ReviewService]    -> ${rawPageBlocks.length} blocos raiz encontrados.`);
 
-            const { calloutBlock, children } = await this._findRevisionsCallout(rawPageBlocks);
+            console.log(`[ReviewService] 🔎 Localizando container de revisões via schema YAML...`);
+            const { calloutBlock, parentContainerId, children } = await layoutParser.findReviewContainer(rawPageBlocks, NOTION_TARGET_PAGE_ID);
             const oldCalloutId = calloutBlock ? calloutBlock.id : null;
+            if (calloutBlock) {
+                console.log(`[ReviewService]    🎯 Container localizado: ${calloutBlock.id} no destino ${parentContainerId} (${children.length} blocos filhos).`);
+            } else {
+                console.log(`[ReviewService]    ℹ️ Nenhum container existente encontrado; novo container será criado em ${parentContainerId}.`);
+            }
 
             console.log(`[ReviewService] 📦 [Passo 2/4] Extraindo clusters existentes do container...`);
             const allClusters = this._extractExistingReviewsFromChildren(children, oldCalloutId);
@@ -59,26 +69,12 @@ class ReviewService {
             allClusters.forEach(cluster => flatPayloads.push(...cluster.payloads));
             console.log(`[ReviewService]    -> Total de clusters consolidados: ${allClusters.length} (${flatPayloads.length} blocos).`);
 
-            // Preparar o cabeçalho heading_1 interno do Callout
-            const headingPayload = {
-                object: 'block',
-                type: 'heading_1',
-                heading_1: {
-                    rich_text: [
-                        {
-                            type: 'text',
-                            text: { content: 'Revisões marcadas' }
-                        }
-                    ],
-                    color: 'orange_background',
-                    is_toggleable: false
-                }
-            };
+            // Obter payloads declarativos do container e do cabeçalho definidos no YAML
+            const { calloutPayload, headerPayload } = layoutParser.getContainerPayload();
+            const calloutChildren = [headerPayload, ...flatPayloads];
 
-            const calloutChildren = [headingPayload, ...flatPayloads];
-
-            console.log(`[ReviewService] 🔄 [Passo 4/4] Executando Atomic Container Replacement...`);
-            await this._replaceRevisionsCallout(oldCalloutId, calloutChildren);
+            console.log(`[ReviewService] 🔄 [Passo 4/4] Executando Atomic Container Replacement no container alvo (${parentContainerId})...`);
+            await this._replaceRevisionsCallout(parentContainerId, oldCalloutId, calloutPayload, calloutChildren);
 
             console.log(`[ReviewService] ✨ Agendamento em lote concluído com sucesso!`);
             console.log(`==================================================================\n`);
@@ -103,7 +99,8 @@ class ReviewService {
             rawBlocks = res.results;
         }
 
-        const { calloutBlock, children } = await this._findRevisionsCallout(rawBlocks);
+        const layoutParser = new PageLayoutParser();
+        const { calloutBlock, children } = await layoutParser.findReviewContainer(rawBlocks, NOTION_TARGET_PAGE_ID);
         if (!calloutBlock || !children || children.length <= 1) return [];
 
         const reviewBlocks = children.slice(1);
@@ -173,55 +170,15 @@ class ReviewService {
     }
 
     /**
-     * Localiza o Callout de "Revisões marcadas" e o bloco anterior para manter a posição.
+     * Realiza a substituição atômica: cria um novo container Callout dentro do parentContainerId
+     * (seja a Coluna ou a Página raiz), injeta os novos dados paginados e deleta o Callout antigo.
      */
-    static async _findRevisionsCallout(rawBlocks) {
-        console.log(`[ReviewService] 🔎 Localizando container Callout de revisões...`);
-        for (let i = 0; i < rawBlocks.length; i++) {
-            const block = rawBlocks[i];
-            if (block.type === 'callout') {
-                const res = await NotionApiService.getPageBlocks(block.id);
-                const children = res.results || [];
-                const firstChild = children[0];
-
-                if (firstChild && firstChild.type.startsWith('heading_')) {
-                    const richText = firstChild[firstChild.type]?.rich_text || [];
-                    const text = richText.map(t => t.plain_text || t.text?.content || '').join('').toLowerCase();
-                    
-                    if (text.includes('revisões marcadas')) {
-                        console.log(`[ReviewService]    🎯 Callout de revisões localizado: ${block.id} (${children.length} blocos filhos).`);
-                        const previousBlockId = i > 0 ? rawBlocks[i - 1].id : null;
-                        return { calloutBlock: block, previousBlockId, children };
-                    }
-                }
-            }
-        }
-
-        console.log(`[ReviewService]    ℹ️ Nenhum Callout existente de revisões foi encontrado.`);
-        const previousBlockId = rawBlocks.length > 0 ? rawBlocks[rawBlocks.length - 1].id : null;
-        return { calloutBlock: null, previousBlockId, children: [] };
-    }
-
-    /**
-     * Realiza a substituição atômica: cria um novo container Callout no fim da página,
-     * injeta os novos dados paginados e deleta o Callout antigo em uma única requisição.
-     */
-    static async _replaceRevisionsCallout(oldCalloutId, childrenPayloads) {
-        const newCalloutPayload = [{
-            object: 'block',
-            type: 'callout',
-            callout: {
-                rich_text: [],
-                icon: { type: 'emoji', emoji: '💡' },
-                color: 'default_background'
-            }
-        }];
-
-        // 1. Criar novo Callout no fim da página (a API do Notion não permite o parâmetro 'after' em páginas planas)
-        console.log(`[ReviewService]    ➕ [1/3] Criando novo bloco Callout na página...`);
+    static async _replaceRevisionsCallout(parentContainerId, oldCalloutId, containerPayload, childrenPayloads) {
+        // 1. Criar novo Callout no container alvo
+        console.log(`[ReviewService]    ➕ [1/3] Criando novo bloco Callout em ${parentContainerId}...`);
         const appendRes = await NotionApiService.appendBlocks(
-            NOTION_TARGET_PAGE_ID, 
-            newCalloutPayload
+            parentContainerId, 
+            [containerPayload]
         );
 
         if (!appendRes || !appendRes.results || appendRes.results.length === 0) {

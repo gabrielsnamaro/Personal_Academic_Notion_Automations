@@ -1,0 +1,31 @@
+review_section:
+  locator:
+    container_type: "callout"
+    search_paths:
+      - "root"
+      - "column_list.columns"
+    match_criteria:
+      child_index: 0
+      block_type: "heading_1"
+      text_contains: "revisões marcadas"
+      case_insensitive: true
+
+  container_output:
+    object: "block"
+    type: "callout"
+    callout:
+      rich_text: []
+      icon:
+        type: "emoji"
+        emoji: "💡"
+      color: "default_background"
+    header_block:
+      object: "block"
+      type: "heading_1"
+      heading_1:
+        rich_text:
+          - type: "text"
+            text:
+              content: "Revisões marcadas"
+        color: "orange_background"
+        is_toggleable: false
