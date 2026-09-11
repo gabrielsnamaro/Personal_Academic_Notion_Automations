@@ -1,10 +1,12 @@
-﻿# Dependências
+# Dependências
 node_modules
 **/node_modules
 
 # Variáveis de Ambiente
 .env
+.env.*
 **/.env
+**/.env.*
 !.env.example
 !**/.env.example
 
@@ -20,3 +22,4 @@ Thumbs.db
 page_payload.json
 fetch_payload.js
 .vercel
+temp_payloads/

@@ -9,14 +9,18 @@ const ReviewTask = require('../domain/notion/ReviewTask');
 class ReviewService {
     /**
      * Entrypoint da automação de repetição espaçada (Spaced Repetition Review).
-     * Coordena o fluxo de buscar, mesclar e re-escrever blocos de estudo em lote.
+     * Coordena o fluxo de buscar, mesclar e re-escrever blocos de estudo em lote
+     * utilizando a estratégia de substituição atômica de container (Atomic Container Replacement).
      * 
      * @param {Object[]} studyBatches Array de objetos { subject, activities }
      * @param {string} formalizationDate Data base em formato YYYY-MM-DD
      */
     static async scheduleReviews(studyBatches, formalizationDate) {
         try {
-            console.log(`[ReviewService] Iniciando processamento em lote. Matérias recebidas: ${studyBatches.length}`);
+            console.log(`\n================== [ReviewService: AGENDAMENTO] ==================`);
+            console.log(`[ReviewService] 🚀 Iniciando processamento em lote.`);
+            console.log(`[ReviewService] 📚 Matérias (${studyBatches.length}):`, studyBatches.map(b => b.subject).join(', '));
+            console.log(`[ReviewService] 📅 Data de formalização: ${formalizationDate}`);
             
             const baseDate = new Date(`${formalizationDate}T12:00:00`);
             const revisions = [
@@ -25,19 +29,20 @@ class ReviewService {
                 { offset: 30, date: new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000) }
             ];
 
-            const res = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
-            const rawBlocks = res.results;
+            console.log(`[ReviewService] 🔍 [Passo 1/4] Buscando blocos raiz da página no Notion...`);
+            const pageRes = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
+            const rawPageBlocks = pageRes.results;
+            console.log(`[ReviewService]    -> ${rawPageBlocks.length} blocos raiz encontrados.`);
 
-            const startIndex = await this._ensureTargetHeading(rawBlocks);
+            const { calloutBlock, children } = await this._findRevisionsCallout(rawPageBlocks);
+            const oldCalloutId = calloutBlock ? calloutBlock.id : null;
 
-            // Abstração de Domínio
-            const domainBlocks = rawBlocks.map(b => new Block(b));
-            const page = new Page(NOTION_TARGET_PAGE_ID, domainBlocks, null);
-
-            // Coletar e fazer parsing dos clusters de revisão existentes
-            const { allClusters, blocksToDelete } = this._extractExistingReviews(page, startIndex);
+            console.log(`[ReviewService] 📦 [Passo 2/4] Extraindo clusters existentes do container...`);
+            const allClusters = this._extractExistingReviewsFromChildren(children, oldCalloutId);
+            console.log(`[ReviewService]    -> ${allClusters.length} clusters existentes recuperados.`);
 
             // Injetar as novas revisões gerando seus payloads nativos usando o próprio Modelo
+            console.log(`[ReviewService] 🔨 [Passo 3/4] Gerando payloads nativos das novas revisões...`);
             for (const rev of revisions) {
                 for (const batch of studyBatches) {
                     allClusters.push({
@@ -52,13 +57,34 @@ class ReviewService {
 
             const flatPayloads = [];
             allClusters.forEach(cluster => flatPayloads.push(...cluster.payloads));
+            console.log(`[ReviewService]    -> Total de clusters consolidados: ${allClusters.length} (${flatPayloads.length} blocos).`);
 
-            // Aplicar as alterações destrutivas de deleção e reinserção
-            await this._replaceBlocks(blocksToDelete, flatPayloads);
+            // Preparar o cabeçalho heading_1 interno do Callout
+            const headingPayload = {
+                object: 'block',
+                type: 'heading_1',
+                heading_1: {
+                    rich_text: [
+                        {
+                            type: 'text',
+                            text: { content: 'Revisões marcadas' }
+                        }
+                    ],
+                    color: 'orange_background',
+                    is_toggleable: false
+                }
+            };
 
+            const calloutChildren = [headingPayload, ...flatPayloads];
+
+            console.log(`[ReviewService] 🔄 [Passo 4/4] Executando Atomic Container Replacement...`);
+            await this._replaceRevisionsCallout(oldCalloutId, calloutChildren);
+
+            console.log(`[ReviewService] ✨ Agendamento em lote concluído com sucesso!`);
+            console.log(`==================================================================\n`);
             return { success: true, message: "Revisões injetadas, organizadas e ordenadas cronologicamente com sucesso." };
         } catch (err) {
-            console.error("Erro fatal no ReviewService:", err.message);
+            console.error("[ReviewService] ❌ Erro fatal no ReviewService:", err.message);
             if (err.message.includes("404")) {
                 throw new Error("Notion API 404: Página não encontrada. Verifique o NOTION_TARGET_PAGE_ID no .env e as permissões.");
             }
@@ -68,16 +94,22 @@ class ReviewService {
 
     /**
      * Retorna as revisões agendadas na página estruturadas como tasks (DTOs pro frontend).
-     * @param {Object[]} rawBlocks - Todos os blocos retornados da página do Notion
-     * @returns {Object[]} Array formatado
+     * @param {Object[]} [rawBlocks] - Opcional. Blocos raiz da página do Notion
+     * @returns {Promise<Object[]>} Array formatado
      */
-    static getScheduledReviews(rawBlocks) {
-        const headingIndex = this._findRevisionsHeadingIndex(rawBlocks);
-        if (headingIndex === -1) return [];
+    static async getScheduledReviews(rawBlocks = null) {
+        if (!rawBlocks) {
+            const res = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
+            rawBlocks = res.results;
+        }
 
-        const domainBlocks = rawBlocks.map(b => new Block(b));
-        const page = new Page(NOTION_TARGET_PAGE_ID, domainBlocks, null);
-        page.setElementPointer(headingIndex + 1);
+        const { calloutBlock, children } = await this._findRevisionsCallout(rawBlocks);
+        if (!calloutBlock || !children || children.length <= 1) return [];
+
+        const reviewBlocks = children.slice(1);
+        const domainBlocks = reviewBlocks.map(b => new Block(b));
+        const page = new Page(calloutBlock.id, domainBlocks, null);
+        page.setElementPointer(0);
 
         const reviews = [];
 
@@ -97,8 +129,6 @@ class ReviewService {
                     }
                 }
             } catch (err) {
-                // O Builder não encontrou uma ReviewTask a partir deste bloco.
-                // Consumimos um bloco "lixo" e tentamos novamente no próximo passo do cursor.
                 page.getNextBlock();
             }
         }
@@ -107,13 +137,17 @@ class ReviewService {
     }
 
     /**
-     * Varre a partir do cursor e usa o Parser do Domínio para identificar clusters completos.
+     * Extrai os clusters de revisão a partir dos blocos filhos do Callout de revisões.
      */
-    static _extractExistingReviews(page, startIndex) {
+    static _extractExistingReviewsFromChildren(children, calloutId) {
         const allClusters = [];
-        const blocksToDelete = [];
-        
-        page.setElementPointer(startIndex);
+        if (!children || children.length <= 1) return allClusters;
+
+        // O primeiro filho é o heading_1 ("Revisões marcadas"), os demais são as tasks
+        const reviewBlocks = children.slice(1);
+        const domainBlocks = reviewBlocks.map(b => new Block(b));
+        const page = new Page(calloutId || 'temp_callout', domainBlocks, null);
+        page.setElementPointer(0);
 
         while (!page.endOfPage()) {
             try {
@@ -123,10 +157,9 @@ class ReviewService {
                     const date = element.getScheduledDate();
                     
                     if (date) {
-                        const clusterPayloads = element.getBlocks().map(b => {
-                            blocksToDelete.push(b.getId());
-                            return b.toNotionPayload();
-                        }).filter(p => p !== null);
+                        const clusterPayloads = element.getBlocks()
+                            .map(b => b.toNotionPayload())
+                            .filter(p => p !== null);
 
                         allClusters.push({ date, payloads: clusterPayloads });
                     }
@@ -136,65 +169,84 @@ class ReviewService {
             }
         }
 
-        return { allClusters, blocksToDelete };
+        return allClusters;
     }
 
     /**
-     * Localiza o índice exato do cabeçalho de seção "Revisões marcadas".
+     * Localiza o Callout de "Revisões marcadas" e o bloco anterior para manter a posição.
      */
-    static _findRevisionsHeadingIndex(blocks) {
-        return blocks.findIndex(b => {
-            if (!b.type.startsWith('heading_')) return false;
-            const fullText = b[b.type].rich_text.map(rt => rt.plain_text).join('').toLowerCase();
-            return fullText.includes('revisões marcadas');
-        });
-    }
+    static async _findRevisionsCallout(rawBlocks) {
+        console.log(`[ReviewService] 🔎 Localizando container Callout de revisões...`);
+        for (let i = 0; i < rawBlocks.length; i++) {
+            const block = rawBlocks[i];
+            if (block.type === 'callout') {
+                const res = await NotionApiService.getPageBlocks(block.id);
+                const children = res.results || [];
+                const firstChild = children[0];
 
-    /**
-     * Verifica se o cabeçalho "Revisões marcadas" existe na página.
-     * Caso contrário, ele é criado. Retorna o índice do bloco onde as revisões começam.
-     */
-    static async _ensureTargetHeading(rawBlocks) {
-        let headingIndex = this._findRevisionsHeadingIndex(rawBlocks);
-
-        if (headingIndex === -1) {
-            const headingPayload = [{
-                object: 'block',
-                type: 'heading_1',
-                heading_1: {
-                    rich_text: [
-                        { type: 'text', text: { content: 'Revisões marcadas' }, annotations: { italic: true } }
-                    ]
+                if (firstChild && firstChild.type.startsWith('heading_')) {
+                    const richText = firstChild[firstChild.type]?.rich_text || [];
+                    const text = richText.map(t => t.plain_text || t.text?.content || '').join('').toLowerCase();
+                    
+                    if (text.includes('revisões marcadas')) {
+                        console.log(`[ReviewService]    🎯 Callout de revisões localizado: ${block.id} (${children.length} blocos filhos).`);
+                        const previousBlockId = i > 0 ? rawBlocks[i - 1].id : null;
+                        return { calloutBlock: block, previousBlockId, children };
+                    }
                 }
-            }];
-            await NotionApiService.appendBlocks(NOTION_TARGET_PAGE_ID, headingPayload);
-            
-            const newRes = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
-            rawBlocks.splice(0, rawBlocks.length, ...newRes.results);
-            headingIndex = this._findRevisionsHeadingIndex(rawBlocks);
+            }
         }
-        return headingIndex + 1;
+
+        console.log(`[ReviewService]    ℹ️ Nenhum Callout existente de revisões foi encontrado.`);
+        const previousBlockId = rawBlocks.length > 0 ? rawBlocks[rawBlocks.length - 1].id : null;
+        return { calloutBlock: null, previousBlockId, children: [] };
     }
 
     /**
-     * Remove todos os blocos desordenados em pequenos lotes e, em seguida,
-     * insere a lista completa perfeitamente cronológica no fim do documento.
+     * Realiza a substituição atômica: cria um novo container Callout no fim da página,
+     * injeta os novos dados paginados e deleta o Callout antigo em uma única requisição.
      */
-    static async _replaceBlocks(blocksToDelete, flatPayloads) {
-        for (let i = 0; i < blocksToDelete.length; i += 3) {
-            const chunk = blocksToDelete.slice(i, i + 3);
-            await Promise.all(chunk.map(id => NotionApiService.deleteBlock(id)));
-            if (i + 3 < blocksToDelete.length) {
-                await delay(1100);
+    static async _replaceRevisionsCallout(oldCalloutId, childrenPayloads) {
+        const newCalloutPayload = [{
+            object: 'block',
+            type: 'callout',
+            callout: {
+                rich_text: [],
+                icon: { type: 'emoji', emoji: '💡' },
+                color: 'default_background'
+            }
+        }];
+
+        // 1. Criar novo Callout no fim da página (a API do Notion não permite o parâmetro 'after' em páginas planas)
+        console.log(`[ReviewService]    ➕ [1/3] Criando novo bloco Callout na página...`);
+        const appendRes = await NotionApiService.appendBlocks(
+            NOTION_TARGET_PAGE_ID, 
+            newCalloutPayload
+        );
+
+        if (!appendRes || !appendRes.results || appendRes.results.length === 0) {
+            throw new Error("Falha ao criar o novo container de Callout no Notion.");
+        }
+
+        const newCalloutId = appendRes.results[0].id;
+        console.log(`[ReviewService]    ✅ Novo Callout criado com ID: ${newCalloutId}`);
+
+        // 2. Injetar todos os filhos no novo Callout em chunks de até 100 blocos
+        console.log(`[ReviewService]    📥 [2/3] Injetando ${childrenPayloads.length} blocos no novo Callout...`);
+        for (let i = 0; i < childrenPayloads.length; i += 100) {
+            const chunk = childrenPayloads.slice(i, i + 100);
+            await NotionApiService.appendBlocks(newCalloutId, chunk);
+            console.log(`[ReviewService]       -> Lote de blocos ${i + 1} a ${Math.min(i + 100, childrenPayloads.length)} inserido com sucesso.`);
+            if (i + 100 < childrenPayloads.length) {
+                await delay(500);
             }
         }
 
-        for (let i = 0; i < flatPayloads.length; i += 100) {
-            const chunk = flatPayloads.slice(i, i + 100);
-            await NotionApiService.appendBlocks(NOTION_TARGET_PAGE_ID, chunk);
-            if (i + 100 < flatPayloads.length) {
-                await delay(1100);
-            }
+        // 3. Deletar o Callout antigo (apaga o bloco e todos os filhos instantaneamente)
+        if (oldCalloutId) {
+            console.log(`[ReviewService]    🗑️ [3/3] Deletando Callout antigo (${oldCalloutId}) em requisição única...`);
+            await NotionApiService.deleteBlock(oldCalloutId);
+            console.log(`[ReviewService]    ✅ Callout antigo removido com sucesso.`);
         }
     }
 }

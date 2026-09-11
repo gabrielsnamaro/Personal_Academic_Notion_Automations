@@ -21,9 +21,14 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+    console.log(`[Frontend API] 🚀 Disparando ${config.method?.toUpperCase()} ${config.baseURL || ''}${config.url}`, {
+      params: config.params,
+      body: config.data,
+    });
     return config;
   },
   (error) => {
+    console.error('[Frontend API] ❌ Erro ao configurar requisição:', error);
     return Promise.reject(error);
   }
 );
@@ -34,10 +39,15 @@ apiClient.interceptors.request.use(
  */
 apiClient.interceptors.response.use(
   (response) => {
+    console.log(`[Frontend API] ✅ Resposta recebida ${response.config.method?.toUpperCase()} ${response.config.url} (Status: ${response.status})`, response.data);
     return response.data; // Retorna direto o conteúdo útil
   },
   (error) => {
-    // Permite log centralizado de erros globais (ex: 401 para redirecionar ao login)
+    console.error(`[Frontend API] ❌ Falha na requisição ${error.config?.method?.toUpperCase()} ${error.config?.url}:`, {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
     return Promise.reject(error);
   }
 );
