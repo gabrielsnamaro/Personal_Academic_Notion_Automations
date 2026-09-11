@@ -39,6 +39,33 @@ class ReviewController {
             return res.status(500).json({ error: error.message });
         }
     }
+
+    static async getActiveReviewCycles(req, res) {
+        try {
+            console.log('[ReviewController] 📥 Recebida requisição GET /notion/reviews/active');
+            const data = await ReviewService.getActiveReviewCycles();
+            console.log(`[ReviewController] 📤 Retornando ${data.cycles.length} ciclos de revisão classificados (${data.summary.totalCycles} ciclos, ${data.timeline.length} pendentes).`);
+            return res.json({ success: true, ...data });
+        } catch (error) {
+            console.error("[ReviewController] ❌ Erro ao buscar ciclos de revisão ativos:", error.message);
+            return res.status(500).json({ error: error.message });
+        }
+    }
+
+    static async invalidateCycle(req, res) {
+        try {
+            const { cycleId } = req.params;
+            const { subject, activities } = req.body || {};
+            console.log(`[ReviewController] 📥 Recebida requisição DELETE /notion/reviews/cycles/${cycleId}`);
+            const result = await ReviewService.invalidateCycle(cycleId, { subject, activities });
+            console.log(`[ReviewController] 📤 Ciclo ${cycleId} invalidado com sucesso.`);
+            return res.json(result);
+        } catch (error) {
+            console.error(`[ReviewController] ❌ Erro ao invalidar ciclo ${req.params?.cycleId}:`, error.message);
+            const status = error.message.includes("não encontrado") ? 404 : 500;
+            return res.status(status).json({ error: error.message });
+        }
+    }
 }
 
 module.exports = ReviewController;

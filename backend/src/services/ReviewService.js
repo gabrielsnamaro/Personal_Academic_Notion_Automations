@@ -6,6 +6,7 @@ const Page = require('../domain/notion/Page');
 const ElementBuilder = require('../domain/notion/parsers/ElementBuilder');
 const ReviewTask = require('../domain/notion/ReviewTask');
 const PageLayoutParser = require('../domain/notion/parsers/PageLayoutParser');
+const ReviewCycleClassifier = require('../domain/notion/classifiers/ReviewCycleClassifier');
 
 class ReviewService {
     /**
@@ -131,6 +132,198 @@ class ReviewService {
         }
         
         return reviews;
+    }
+
+    /**
+     * Retorna os ciclos de revisão ativos classificados de acordo com a curva do esquecimento
+     * e o espaçamento proporcional entre as tarefas pendentes no Notion.
+     * @param {Object[]} [rawBlocks=null] - Opcional. Blocos raiz da página
+     * @returns {Promise<Object>} Dashboard payload estruturado
+     */
+    static async getActiveReviewCycles(rawBlocks = null) {
+        if (!rawBlocks) {
+            const res = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
+            rawBlocks = res.results;
+        }
+
+        const layoutParser = new PageLayoutParser();
+        const { calloutBlock, children } = await layoutParser.findReviewContainer(rawBlocks, NOTION_TARGET_PAGE_ID);
+        if (!calloutBlock || !children || children.length <= 1) {
+            return {
+                summary: { totalCycles: 0, stage1Initial: 0, stage2Weekly: 0, stage3Monthly: 0, anomalousCount: 0 },
+                cycles: [],
+                timeline: []
+            };
+        }
+
+        const reviewBlocks = children.slice(1);
+        const domainBlocks = reviewBlocks.map(b => new Block(b));
+        const page = new Page(calloutBlock.id, domainBlocks, null);
+        page.setElementPointer(0);
+
+        const tasks = [];
+
+        while (!page.endOfPage()) {
+            try {
+                const element = ElementBuilder.fromPage(page).tryReviewTask().build();
+                if (element instanceof ReviewTask) {
+                    tasks.push(element);
+                }
+            } catch (err) {
+                page.getNextBlock();
+            }
+        }
+
+        const cycles = ReviewCycleClassifier.classify(tasks);
+        const serializedCycles = cycles.map(c => c.toJSON());
+
+        const summary = {
+            totalCycles: cycles.length,
+            stage1Initial: cycles.filter(c => c.getStage() === 'STAGE_1_INITIAL').length,
+            stage2Weekly: cycles.filter(c => c.getStage() === 'STAGE_2_WEEKLY').length,
+            stage3Monthly: cycles.filter(c => c.getStage() === 'STAGE_3_MONTHLY').length,
+            anomalousCount: cycles.filter(c => c.isRecalculationSuggested()).length
+        };
+
+        const timeline = [];
+        for (const cycle of serializedCycles) {
+            const pendingMilestones = cycle.milestones.filter(m => m.status === 'pending');
+            for (const pm of pendingMilestones) {
+                timeline.push({
+                    cycleId: cycle.id,
+                    subject: cycle.subject,
+                    activities: cycle.activities,
+                    stage: cycle.stage,
+                    milestoneLabel: pm.label,
+                    offsetDays: pm.offsetDays,
+                    date: pm.date,
+                    recalculationSuggested: cycle.recalculationSuggested
+                });
+            }
+        }
+        timeline.sort((a, b) => a.date.localeCompare(b.date));
+
+        return {
+            summary,
+            cycles: serializedCycles,
+            timeline
+        };
+    }
+
+    /**
+     * Invalida um ciclo de revisão específico.
+     * Utiliza o padrão Atomic Container Replacement: localiza as tarefas do ciclo alvo,
+     * filtra-as, reordena todas as tarefas restantes cronologicamente e substitui
+     * o container Callout no Notion de forma atômica.
+     * 
+     * @param {string} cycleId Identificador único do ciclo
+     * @param {Object} [options] Opções extras (subject, activities)
+     * @param {Object[]} [rawBlocks=null] Opcional para injeção de dependência/testes
+     * @returns {Promise<Object>} Resumo da operação
+     */
+    static async invalidateCycle(cycleId, options = {}, rawBlocks = null) {
+        console.log(`\n================== [ReviewService: INVALIDAÇÃO DE CICLO] ==================`);
+        console.log(`[ReviewService] 🗑️ Solicitada invalidação do ciclo: ${cycleId}`, options);
+
+        if (!rawBlocks) {
+            const res = await NotionApiService.getPageBlocks(NOTION_TARGET_PAGE_ID);
+            rawBlocks = res.results;
+        }
+
+        const layoutParser = new PageLayoutParser();
+        const { parentContainerId, calloutBlock, children } = await layoutParser.findReviewContainer(rawBlocks, NOTION_TARGET_PAGE_ID);
+        if (!calloutBlock) {
+            throw new Error("Container de revisões não encontrado no Notion.");
+        }
+
+        const reviewBlocks = children ? children.slice(1) : [];
+        const domainBlocks = reviewBlocks.map(b => new Block(b));
+        const page = new Page(calloutBlock.id, domainBlocks, null);
+        page.setElementPointer(0);
+
+        const tasks = [];
+        while (!page.endOfPage()) {
+            try {
+                const element = ElementBuilder.fromPage(page).tryReviewTask().build();
+                if (element instanceof ReviewTask) {
+                    tasks.push(element);
+                }
+            } catch (err) {
+                page.getNextBlock();
+            }
+        }
+
+        const cycles = ReviewCycleClassifier.classify(tasks);
+        let targetCycle = cycles.find(c => c.getId() === cycleId);
+        
+        // Fallback: se não achar por ID exato, busca por matéria e tópicos
+        if (!targetCycle && options.subject) {
+            const normSub = options.subject.trim().toLowerCase();
+            targetCycle = cycles.find(c => c.getSubject().trim().toLowerCase() === normSub);
+        }
+
+        if (!targetCycle) {
+            console.warn(`[ReviewService] ⚠️ Ciclo ${cycleId} não encontrado entre os ${cycles.length} ciclos ativos.`);
+            throw new Error("Ciclo de revisão não encontrado ou já invalidado.");
+        }
+
+        console.log(`[ReviewService] 🎯 Ciclo identificado para invalidação:`, {
+            id: targetCycle.getId(),
+            subject: targetCycle.getSubject(),
+            activities: targetCycle.getActivities(),
+            tasksCount: targetCycle.getTasks().length
+        });
+
+        // Coletar os IDs de blocos das tarefas pertencentes a este ciclo
+        const targetTaskRootIds = new Set(
+            targetCycle.getTasks().map(t => t.getBlocks()[0]?.getId()).filter(Boolean)
+        );
+
+        // Filtrar as tarefas restantes (todas que NÃO pertencem ao ciclo invalidado)
+        const remainingTasks = tasks.filter(t => {
+            const rootId = t.getBlocks()[0]?.getId();
+            return !targetTaskRootIds.has(rootId);
+        });
+
+        console.log(`[ReviewService] 📊 Tarefas antes: ${tasks.length} | Removidas: ${targetCycle.getTasks().length} | Restantes: ${remainingTasks.length}`);
+
+        // Agrupar clusters das tarefas restantes
+        const remainingClusters = [];
+        for (const task of remainingTasks) {
+            const date = task.getScheduledDate();
+            if (date) {
+                const clusterPayloads = task.getBlocks()
+                    .map(b => b.toNotionPayload())
+                    .filter(p => p !== null);
+
+                remainingClusters.push({ date, payloads: clusterPayloads });
+            }
+        }
+
+        // Ordenar estritamente cronológico
+        remainingClusters.sort((a, b) => a.date - b.date);
+
+        const flatPayloads = [];
+        remainingClusters.forEach(cluster => flatPayloads.push(...cluster.payloads));
+
+        // Obter payloads declarativos do container e do cabeçalho
+        const { calloutPayload, headerPayload } = layoutParser.getContainerPayload();
+        const calloutChildren = [headerPayload, ...flatPayloads];
+
+        console.log(`[ReviewService] 🔄 Executando Atomic Container Replacement com ${remainingClusters.length} clusters restantes (${calloutChildren.length} blocos)...`);
+        await this._replaceRevisionsCallout(parentContainerId, calloutBlock.id, calloutPayload, calloutChildren);
+
+        console.log(`[ReviewService] ✨ Ciclo invalidado e container reconstruído com sucesso!`);
+        console.log(`===========================================================================\n`);
+
+        return {
+            success: true,
+            message: "Ciclo invalidado e container de revisões atualizado com sucesso.",
+            cycleId: targetCycle.getId(),
+            subject: targetCycle.getSubject(),
+            deletedTasksCount: targetCycle.getTasks().length,
+            remainingTasksCount: remainingTasks.length
+        };
     }
 
     /**

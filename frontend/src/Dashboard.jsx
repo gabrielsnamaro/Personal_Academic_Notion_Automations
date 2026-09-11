@@ -2,10 +2,13 @@ import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import ReviewForm from './components/ReviewForm';
+import ReviewCyclesPanel from './components/ReviewCyclesPanel';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Layers, PlusCircle } from 'lucide-react';
 
 export default function Dashboard({ onLogout }) {
   const [currentTab, setCurrentTab] = useState('reviews');
+  const [reviewSubTab, setReviewSubTab] = useState('cycles');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -35,7 +38,7 @@ export default function Dashboard({ onLogout }) {
         <Header onMenuClick={() => setIsMobileMenuOpen(true)} />
         
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-4 sm:px-8 md:px-12 py-8 md:py-16">
+          <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-8 md:px-12 py-6 md:py-8">
             
             {currentTab === 'dashboard' && (
               <>
@@ -46,7 +49,7 @@ export default function Dashboard({ onLogout }) {
                   </p>
                 </div>
 
-                <Card className="max-w-2xl border-notion-border shadow-sm">
+                <Card className="w-full border-notion-border shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-lg font-bold text-notion-text">Status do Sistema</CardTitle>
                   </CardHeader>
@@ -68,13 +71,53 @@ export default function Dashboard({ onLogout }) {
 
             {currentTab === 'reviews' && (
               <>
-                <div className="mb-8 md:mb-12">
-                  <h1 className="text-2xl md:text-4xl font-bold mb-3 tracking-tight">Revisões Espaçadas</h1>
-                  <p className="text-sm md:text-[15px] text-notion-muted font-medium leading-relaxed">
-                    Agende tópicos de estudo para o 1º, 7º e 30º dia.
-                  </p>
+                <div className="mb-6 md:mb-8">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h1 className="text-2xl md:text-4xl font-bold mb-2 tracking-tight">Revisões Espaçadas</h1>
+                      <p className="text-sm md:text-[15px] text-notion-muted font-medium leading-relaxed">
+                        Acompanhe seus ciclos de retenção e agende novos tópicos de estudo.
+                      </p>
+                    </div>
+
+                    {/* Sub-Tabs de Navegação */}
+                    <div className="flex items-center bg-stone-100 p-1 rounded-xl border border-stone-200/80 self-start sm:self-auto shrink-0 shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={() => setReviewSubTab('cycles')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                          reviewSubTab === 'cycles'
+                            ? 'bg-white text-notion-text shadow-xs border border-stone-200'
+                            : 'text-stone-500 hover:text-notion-text'
+                        }`}
+                      >
+                        <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                        Ciclos Ativos
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setReviewSubTab('schedule')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                          reviewSubTab === 'schedule'
+                            ? 'bg-white text-notion-text shadow-xs border border-stone-200'
+                            : 'text-stone-500 hover:text-notion-text'
+                        }`}
+                      >
+                        <PlusCircle className="w-3.5 h-3.5 text-stone-600" />
+                        Agendar Revisões
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <ReviewForm />
+
+                {reviewSubTab === 'cycles' && (
+                  <ReviewCyclesPanel onSwitchToSchedule={() => setReviewSubTab('schedule')} />
+                )}
+
+                {reviewSubTab === 'schedule' && (
+                  <ReviewForm onSuccess={() => setReviewSubTab('cycles')} />
+                )}
               </>
             )}
             

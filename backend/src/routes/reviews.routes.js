@@ -6,6 +6,8 @@ const router = Router();
 
 router.use(authMiddleware);
 router.post('/', ReviewController.scheduleReviews);
+router.get('/active', ReviewController.getActiveReviewCycles);
+router.delete('/cycles/:cycleId', ReviewController.invalidateCycle);
 router.get('/', ReviewController.getScheduledReviews);
 
 module.exports = router;

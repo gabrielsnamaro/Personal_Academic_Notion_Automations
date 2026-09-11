@@ -28,7 +28,7 @@ const withViewTransition = (callback) => {
   }
 };
 
-export default function ReviewForm() {
+export default function ReviewForm({ onSuccess }) {
   const [batches, setBatches] = useLocalStorage('reviewForm_batches', [
     { id: crypto.randomUUID(), subject: '', activities: [''] }
   ]);
@@ -169,7 +169,7 @@ export default function ReviewForm() {
   };
 
   return (
-    <Card className="max-w-2xl mb-12 shadow-sm border-notion-border rounded-xl">
+    <Card className="w-full mb-12 shadow-sm border-notion-border rounded-xl">
       <CardHeader>
         <CardTitle className="text-xl font-bold text-notion-text">Cadastrar Revisão (Curva de Esquecimento)</CardTitle>
         <CardDescription className="text-sm text-notion-muted">
@@ -266,8 +266,19 @@ export default function ReviewForm() {
           </Button>
 
           {message && (
-            <div className={`p-3 rounded-md text-sm font-medium mt-4 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-              {message.text}
+            <div className={`p-3 rounded-md text-sm font-medium mt-4 flex items-center justify-between gap-3 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+              <span>{message.text}</span>
+              {message.type === 'success' && onSuccess && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={onSuccess}
+                  className="h-7 text-xs bg-white text-green-800 border-green-300 hover:bg-green-100/80 shrink-0 shadow-2xs font-semibold"
+                >
+                  Ver Ciclos Ativos
+                </Button>
+              )}
             </div>
           )}
         </form>
